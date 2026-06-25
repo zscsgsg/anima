@@ -4,6 +4,7 @@ com\anima\llm\DeepSeekProvider$StreamListener.class
 com\anima\tool\LsTool.class
 com\anima\web\ChatEndpoint$1.class
 com\anima\AnimaApp.class
+com\anima\tool\GrepTool.class
 com\anima\tool\BashTool.class
 com\anima\agent\AgentLoop$LoopCallback.class
 com\anima\llm\DeepSeekProvider$ToolCall.class
@@ -15,6 +16,7 @@ com\anima\agent\PermissionGate.class
 com\anima\agent\AgentLoop.class
 com\anima\tool\EditFileTool.class
 com\anima\agent\AgentLoop$1.class
+com\anima\tool\GlobTool.class
 com\anima\tool\Tool.class
 com\anima\llm\DeepSeekProvider.class
 com\anima\llm\DeepSeekProvider$1.class
