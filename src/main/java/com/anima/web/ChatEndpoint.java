@@ -54,55 +54,64 @@ public class ChatEndpoint {
         resp.setHeader("Connection", "keep-alive");
         resp.setHeader("Access-Control-Allow-Origin", "*");
 
-        CompletableFuture.runAsync(() -> {
-            try {
-                PrintWriter writer = resp.getWriter();
-                provider.stream(
-                    "You are Anima, a helpful AI coding assistant. Respond concisely.",
-                    message,
-                    new DeepSeekProvider.StreamListener() {
-                        @Override
-                        public void onThinking(String token) {
-                            writeSse(writer, "thinking", token);
-                        }
-
-                        @Override
-                        public void onResponse(String token) {
-                            writeSse(writer, "response", token);
-                        }
-
-                        @Override
-                        public void onComplete(DeepSeekProvider.Usage usage) {
-                            try {
-                                String done = json.writeValueAsString(Map.of(
-                                    "promptTokens", usage.promptTokens(),
-                                    "completionTokens", usage.completionTokens()
-                                ));
-                                writeSseRaw(writer, "event: done\ndata: " + done + "\n\n");
-                                writer.close();
-                                asyncCtx.complete();
-                            } catch (Exception ignored) {
-                                asyncCtx.complete();
-                            }
-                        }
-
-                        @Override
-                        public void onError(Throwable e) {
-                            try {
-                                String err = json.writeValueAsString(Map.of(
-                                    "message", e.getMessage() != null ? e.getMessage() : "Unknown error"
-                                ));
-                                writeSseRaw(writer, "event: error\ndata: " + err + "\n\n");
-                                writer.close();
-                            } catch (Exception ignored) {}
-                            asyncCtx.complete();
-                        }
-                    }
-                );
-            } catch (Exception e) {
+        // Track completion to avoid double-complete race
+        var completed = new java.util.concurrent.atomic.AtomicBoolean(false);
+        Runnable safeComplete = () -> {
+            if (completed.compareAndSet(false, true)) {
                 asyncCtx.complete();
             }
-        });
+        };
+
+        PrintWriter writer;
+        try {
+            writer = resp.getWriter();
+        } catch (Exception e) {
+            safeComplete.run();
+            return;
+        }
+
+        provider.stream(
+            "You are Anima, a helpful AI coding assistant. Respond concisely.",
+            message,
+            new DeepSeekProvider.StreamListener() {
+                @Override
+                public void onThinking(String token) {
+                    writeSse(writer, "thinking", token);
+                }
+
+                @Override
+                public void onResponse(String token) {
+                    writeSse(writer, "response", token);
+                }
+
+                @Override
+                public void onComplete(DeepSeekProvider.Usage usage) {
+                    try {
+                        String done = json.writeValueAsString(Map.of(
+                            "promptTokens", usage.promptTokens(),
+                            "completionTokens", usage.completionTokens()
+                        ));
+                        writeSseRaw(writer, "event: done\ndata: " + done + "\n\n");
+                    } catch (Exception ignored) {}
+                    try { writer.close(); } catch (Exception ignored) {}
+                    safeComplete.run();
+                }
+
+                @Override
+                public void onError(Throwable e) {
+                    if (!completed.get()) {
+                        try {
+                            String err = json.writeValueAsString(Map.of(
+                                "message", e.getMessage() != null ? e.getMessage() : "Unknown error"
+                            ));
+                            writeSseRaw(writer, "event: error\ndata: " + err + "\n\n");
+                        } catch (Exception ignored) {}
+                    }
+                    try { writer.close(); } catch (Exception ignored) {}
+                    safeComplete.run();
+                }
+            }
+        );
     }
 
     private static void writeSse(PrintWriter writer, String event, String data) {

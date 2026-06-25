@@ -31,7 +31,7 @@ public class DeepSeekProvider {
         this.model = OpenAiStreamingChatModel.builder()
                 .baseUrl("https://api.deepseek.com")
                 .apiKey(apiKey)
-                .modelName("deepseek-chat")
+                .modelName("deepseek-v4-flash")
                 .timeout(Duration.ofSeconds(120))
                 .logRequests(true)
                 .logResponses(true)
