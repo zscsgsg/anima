@@ -4,10 +4,12 @@ import com.anima.llm.DeepSeekProvider;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.javalin.Javalin;
 import io.javalin.http.Context;
+import jakarta.servlet.AsyncContext;
+import jakarta.servlet.http.HttpServletResponse;
 
-import java.io.OutputStream;
-import java.nio.charset.StandardCharsets;
+import java.io.PrintWriter;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * SSE endpoint for streaming chat completions.
@@ -41,78 +43,79 @@ public class ChatEndpoint {
             return;
         }
 
-        ctx.header("Access-Control-Allow-Origin", "*");
-        ctx.contentType("text/event-stream");
-        ctx.header("Cache-Control", "no-cache");
-        ctx.header("Connection", "keep-alive");
+        var req = ctx.req();
+        var asyncCtx = req.startAsync();
+        asyncCtx.setTimeout(120_000);
 
-        OutputStream out;
-        try {
-            out = ctx.res().getOutputStream();
-        } catch (Exception e) {
-            ctx.status(500).result("{\"error\": \"Cannot get output stream\"}");
-            return;
-        }
+        var resp = (HttpServletResponse) asyncCtx.getResponse();
+        resp.setContentType("text/event-stream");
+        resp.setCharacterEncoding("UTF-8");
+        resp.setHeader("Cache-Control", "no-cache");
+        resp.setHeader("Connection", "keep-alive");
+        resp.setHeader("Access-Control-Allow-Origin", "*");
 
-        try {
-            provider.stream(
-                "You are Anima, a helpful AI coding assistant. Respond concisely.",
-                message,
-                new DeepSeekProvider.StreamListener() {
-                    @Override
-                    public void onThinking(String token) {
-                        writeSse(out, "thinking", token);
-                    }
-
-                    @Override
-                    public void onResponse(String token) {
-                        writeSse(out, "response", token);
-                    }
-
-                    @Override
-                    public void onComplete(DeepSeekProvider.Usage usage) {
-                        try {
-                            String done = json.writeValueAsString(Map.of(
-                                "promptTokens", usage.promptTokens(),
-                                "completionTokens", usage.completionTokens()
-                            ));
-                            writeSseRaw(out, "event: done\ndata: " + done + "\n\n");
-                            out.close();
-                        } catch (Exception ignored) {}
-                    }
-
-                    @Override
-                    public void onError(Throwable e) {
-                        try {
-                            String err = json.writeValueAsString(Map.of(
-                                "message", e.getMessage() != null ? e.getMessage() : "Unknown error"
-                            ));
-                            writeSseRaw(out, "event: error\ndata: " + err + "\n\n");
-                            out.close();
-                        } catch (Exception ignored) {}
-                    }
-                }
-            );
-        } catch (Exception e) {
+        CompletableFuture.runAsync(() -> {
             try {
-                writeSseRaw(out, "event: error\ndata: " + json.writeValueAsString(Map.of("message", e.getMessage())) + "\n\n");
-                out.close();
-            } catch (Exception ignored) {}
-        }
+                PrintWriter writer = resp.getWriter();
+                provider.stream(
+                    "You are Anima, a helpful AI coding assistant. Respond concisely.",
+                    message,
+                    new DeepSeekProvider.StreamListener() {
+                        @Override
+                        public void onThinking(String token) {
+                            writeSse(writer, "thinking", token);
+                        }
+
+                        @Override
+                        public void onResponse(String token) {
+                            writeSse(writer, "response", token);
+                        }
+
+                        @Override
+                        public void onComplete(DeepSeekProvider.Usage usage) {
+                            try {
+                                String done = json.writeValueAsString(Map.of(
+                                    "promptTokens", usage.promptTokens(),
+                                    "completionTokens", usage.completionTokens()
+                                ));
+                                writeSseRaw(writer, "event: done\ndata: " + done + "\n\n");
+                                writer.close();
+                                asyncCtx.complete();
+                            } catch (Exception ignored) {
+                                asyncCtx.complete();
+                            }
+                        }
+
+                        @Override
+                        public void onError(Throwable e) {
+                            try {
+                                String err = json.writeValueAsString(Map.of(
+                                    "message", e.getMessage() != null ? e.getMessage() : "Unknown error"
+                                ));
+                                writeSseRaw(writer, "event: error\ndata: " + err + "\n\n");
+                                writer.close();
+                            } catch (Exception ignored) {}
+                            asyncCtx.complete();
+                        }
+                    }
+                );
+            } catch (Exception e) {
+                asyncCtx.complete();
+            }
+        });
     }
 
-    private static void writeSse(OutputStream out, String event, String data) {
-        writeSseRaw(out, "event: " + event + "\ndata: " + escapeSse(data) + "\n\n");
+    private static void writeSse(PrintWriter writer, String event, String data) {
+        writeSseRaw(writer, "event: " + event + "\ndata: " + escapeSse(data) + "\n\n");
     }
 
-    private static void writeSseRaw(OutputStream out, String frame) {
+    private static void writeSseRaw(PrintWriter writer, String frame) {
         try {
-            out.write(frame.getBytes(StandardCharsets.UTF_8));
-            out.flush();
+            writer.write(frame);
+            writer.flush();
         } catch (Exception ignored) {}
     }
 
-    /** Escape \n in SSE data so multi-line strings don't break the protocol. */
     private static String escapeSse(String s) {
         return s.replace("\n", "\\n").replace("\r", "\\r");
     }
