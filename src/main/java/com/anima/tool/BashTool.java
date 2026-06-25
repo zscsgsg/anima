@@ -25,10 +25,13 @@ public class BashTool implements Tool {
           "properties": {
             "command": {
               "type": "string",
-              "description": "The shell command to execute (e.g. 'mvn --version', 'git status')"
+              "description": "The shell command to execute (alias: cmd)"
+            },
+            "cmd": {
+              "type": "string",
+              "description": "The shell command to execute (alias: command)"
             }
-          },
-          "required": ["command"]
+          }
         }
         """;
     }
@@ -36,7 +39,12 @@ public class BashTool implements Tool {
     @Override
     public String execute(String arguments) throws Exception {
         var json = new com.fasterxml.jackson.databind.ObjectMapper().readTree(arguments);
-        String command = json.get("command").asText();
+        // Accept both "command" and "cmd" — models often use cmd
+        String command = json.has("command") ? json.get("command").asText() :
+                         json.has("cmd") ? json.get("cmd").asText() : null;
+        if (command == null) {
+            return "Error: missing 'command' or 'cmd' argument";
+        }
 
         boolean isWindows = System.getProperty("os.name").toLowerCase().contains("win");
         ProcessBuilder pb = new ProcessBuilder();
