@@ -3,16 +3,18 @@ package com.anima.tool;
 import java.nio.file.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
 /**
- * File pattern search. Supports glob patterns like "**​/*.java", "src/**​/*Controller.java".
+ * File pattern search using glob-to-regex conversion.
+ * Avoids PathMatcher bugs with Windows drive letters.
  */
 public class GlobTool implements Tool {
 
     @Override public String name() { return "glob"; }
     @Override public String description() {
-        return "Find files matching a glob pattern. Use this to discover project files by name (e.g. '**​/*Controller.java', 'src/**​/*Test*'). Supports *, ?, and ** (recursive).";
+        return "Find files matching a glob pattern. Use this to discover project files by name. Supports *, ?, and ** (recursive). Examples: '**​/*.java', 'src/**​/*Test*'.";
     }
 
     @Override public String schema() {
@@ -22,7 +24,7 @@ public class GlobTool implements Tool {
           "properties": {
             "pattern": {
               "type": "string",
-              "description": "Glob pattern to match file paths (e.g. '**​/*.java', 'src/**​/*.xml')"
+              "description": "Glob pattern to match file paths"
             },
             "path": {
               "type": "string",
@@ -39,28 +41,53 @@ public class GlobTool implements Tool {
         var json = new com.fasterxml.jackson.databind.ObjectMapper().readTree(arguments);
         String pattern = json.get("pattern").asText();
         String baseStr = json.has("path") ? json.get("path").asText() : ".";
-        Path base = Path.of(baseStr);
-        if (!base.isAbsolute()) base = Path.of("").toAbsolutePath().resolve(baseStr).normalize();
-        final Path baseDir = base;
-        if (!Files.isDirectory(base)) return "Error: not a directory: " + base;
+        Path baseDir = Path.of(baseStr);
+        if (!baseDir.isAbsolute()) baseDir = Path.of("").toAbsolutePath().resolve(baseStr).normalize();
+        if (!Files.isDirectory(baseDir)) return "Error: not a directory: " + baseDir;
+        final Path root = baseDir;
 
-        // Convert glob pattern to PathMatcher syntax
-        String glob = "glob:" + baseDir.toString().replace("\\", "/") + "/" + pattern.replace("\\", "/");
-        PathMatcher matcher;
-        try { matcher = FileSystems.getDefault().getPathMatcher(glob); }
-        catch (PatternSyntaxException | UnsupportedOperationException e) {
-            return "Error: invalid glob pattern: " + pattern;
-        }
-
+        Pattern regex = globToRegex(pattern);
         List<String> matches = new ArrayList<>();
-        Files.walk(baseDir, 5).filter(p -> !Files.isDirectory(p)).forEach(p -> {
-            if (matcher.matches(p)) matches.add(baseDir.relativize(p).toString().replace("\\", "/"));
+        int maxDepth = pattern.contains("**") ? 10 : 1;
+
+        Files.walk(root, maxDepth).filter(Files::isRegularFile).limit(500).forEach(p -> {
+            String rel = root.relativize(p).toString().replace("\\", "/");
+            if (regex.matcher(rel).matches()) matches.add(rel);
         });
 
         if (matches.isEmpty()) return "No files matching: " + pattern;
         var sb = new StringBuilder();
         sb.append(matches.size()).append(" file(s) matching \"").append(pattern).append("\":\n");
-        for (String m : matches) sb.append(m).append("\n");
+        matches.stream().sorted().forEach(m -> sb.append(m).append("\n"));
         return sb.toString().trim();
+    }
+
+    /** Convert a glob pattern to regex. */
+    static Pattern globToRegex(String glob) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("^");
+        for (int i = 0; i < glob.length(); i++) {
+            char c = glob.charAt(i);
+            if (c == '*') {
+                if (i + 1 < glob.length() && glob.charAt(i + 1) == '*') {
+                    // ** matches zero or more directory levels
+                    if (i + 2 < glob.length() && glob.charAt(i + 2) == '/') {
+                        sb.append("(?:.*/)?");
+                        i += 2; // skip * and /
+                        continue;
+                    }
+                    i++; // skip second *
+                }
+                sb.append("[^/]*");
+            } else if (c == '?') {
+                sb.append("[^/]");
+            } else if (c == '.') {
+                sb.append("\\.");
+            } else {
+                sb.append(c);
+            }
+        }
+        sb.append("$");
+        return Pattern.compile(sb.toString());
     }
 }

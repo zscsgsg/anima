@@ -19,11 +19,12 @@ import java.util.concurrent.*;
 public class ChatEndpoint {
 
     private static final String SYSTEM_PROMPT = """
-        You are Anima, a terminal AI coding agent. You have tools available.
+        You are Anima, a terminal AI coding agent.
+        You are running on Windows (cmd.exe). Use Windows commands in bash: dir, type, findstr, tasklist.
+        Use ls, glob, grep for cross-platform tasks — they work everywhere without confirmation.
+        Use read_file to inspect file contents — never guess.
         When the user asks you to do something, use the appropriate tool.
         After seeing tool results, synthesize a final answer.
-        Never guess file contents — use read_file to read them.
-        Never guess command output — use bash to run commands.
         Respond in the same language as the user.
         """;
 

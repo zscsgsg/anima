@@ -54,7 +54,7 @@ public class GrepTool implements Tool {
         catch (PatternSyntaxException e) { return "Error: invalid regex pattern: " + regex; }
 
         List<String> results = new ArrayList<>();
-        Files.walk(baseDir, 5).filter(p -> !Files.isDirectory(p)).forEach(p -> {
+        Files.walk(baseDir, 10).filter(p -> !Files.isDirectory(p)).forEach(p -> {
             if (include != null && !p.getFileName().toString().toLowerCase().endsWith(fileExt(include))) return;
             try {
                 String rel = baseDir.relativize(p).toString().replace("\\", "/");
