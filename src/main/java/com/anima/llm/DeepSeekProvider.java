@@ -1,19 +1,20 @@
 package com.anima.llm;
 
-import dev.langchain4j.model.openai.OpenAiStreamingChatModel;
-import dev.langchain4j.model.chat.response.StreamingChatResponseHandler;
+import dev.langchain4j.agent.tool.ToolExecutionRequest;
+import dev.langchain4j.agent.tool.ToolSpecification;
+import dev.langchain4j.data.message.*;
+import dev.langchain4j.model.chat.request.ChatRequest;
 import dev.langchain4j.model.chat.response.ChatResponse;
 import dev.langchain4j.model.chat.response.PartialThinking;
-import dev.langchain4j.data.message.SystemMessage;
-import dev.langchain4j.data.message.UserMessage;
-import dev.langchain4j.model.chat.request.ChatRequest;
+import dev.langchain4j.model.chat.response.StreamingChatResponseHandler;
+import dev.langchain4j.model.openai.OpenAiStreamingChatModel;
 
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.List;
 
 /**
- * DeepSeek streaming LLM provider.
- * Wraps LangChain4j's OpenAiStreamingChatModel pointed at DeepSeek's OpenAI-compatible API.
+ * DeepSeek streaming LLM provider with tool calling support.
  */
 public class DeepSeekProvider {
 
@@ -23,11 +24,8 @@ public class DeepSeekProvider {
         String apiKey = System.getenv("DEEPSEEK_API_KEY");
         if (apiKey == null || apiKey.isBlank()) {
             throw new IllegalStateException(
-                "DEEPSEEK_API_KEY environment variable is not set. " +
-                "Get your key at https://platform.deepseek.com/api_keys"
-            );
+                "DEEPSEEK_API_KEY environment variable is not set.");
         }
-
         this.model = OpenAiStreamingChatModel.builder()
                 .baseUrl("https://api.deepseek.com")
                 .apiKey(apiKey)
@@ -39,22 +37,18 @@ public class DeepSeekProvider {
     }
 
     /**
-     * Stream a chat completion to the given listener.
+     * Stream a chat completion with tool support.
      *
-     * @param systemPrompt the system message (can be null)
-     * @param userMessage  the user's input
-     * @param listener     receives tokens as they arrive
+     * @param messages conversation history (system, user, assistant, tool messages)
+     * @param tools    tool schemas (empty list = no tools)
+     * @param listener receives tokens and tool calls as they arrive
      */
-    public void stream(String systemPrompt, String userMessage, StreamListener listener) {
-        var messages = new ArrayList<dev.langchain4j.data.message.ChatMessage>();
-        if (systemPrompt != null && !systemPrompt.isBlank()) {
-            messages.add(SystemMessage.from(systemPrompt));
+    public void stream(List<ChatMessage> messages, List<ToolSpecification> tools, StreamListener listener) {
+        var builder = ChatRequest.builder().messages(messages);
+        if (tools != null && !tools.isEmpty()) {
+            builder.toolSpecifications(tools);
         }
-        messages.add(UserMessage.from(userMessage));
-
-        var request = ChatRequest.builder()
-                .messages(messages)
-                .build();
+        var request = builder.build();
 
         model.chat(request, new StreamingChatResponseHandler() {
             @Override
@@ -73,12 +67,18 @@ public class DeepSeekProvider {
 
             @Override
             public void onCompleteResponse(ChatResponse completeResponse) {
-                var tokenUsage = completeResponse.metadata() != null
-                        ? completeResponse.metadata().tokenUsage()
-                        : null;
-                int promptTokens = tokenUsage != null ? tokenUsage.inputTokenCount() : 0;
-                int completionTokens = tokenUsage != null ? tokenUsage.outputTokenCount() : 0;
-                listener.onComplete(new Usage(promptTokens, completionTokens));
+                var aiMsg = completeResponse.aiMessage();
+                List<ToolCall> toolCalls = new ArrayList<>();
+                if (aiMsg != null && aiMsg.hasToolExecutionRequests()) {
+                    for (ToolExecutionRequest req : aiMsg.toolExecutionRequests()) {
+                        toolCalls.add(new ToolCall(req.id(), req.name(), req.arguments()));
+                    }
+                }
+                String text = aiMsg != null ? aiMsg.text() : "";
+                var tu = completeResponse.metadata() != null ? completeResponse.metadata().tokenUsage() : null;
+                int pt = tu != null ? tu.inputTokenCount() : 0;
+                int ct = tu != null ? tu.outputTokenCount() : 0;
+                listener.onComplete(text, toolCalls, new Usage(pt, ct));
             }
 
             @Override
@@ -88,14 +88,13 @@ public class DeepSeekProvider {
         });
     }
 
-    /** Token usage record. */
     public record Usage(int promptTokens, int completionTokens) {}
+    public record ToolCall(String id, String name, String arguments) {}
 
-    /** Callback for streaming responses. */
     public interface StreamListener {
         void onThinking(String token);
         void onResponse(String token);
-        void onComplete(Usage usage);
+        void onComplete(String text, List<ToolCall> toolCalls, Usage usage);
         void onError(Throwable e);
     }
 }

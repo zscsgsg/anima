@@ -21,9 +21,11 @@
 ### Task 1: 创建 Maven 项目骨架
 
 **Files:**
+
 - Create: `pom.xml`
 
 **Interfaces:**
+
 - Produces: Maven 项目，坐标 `com.anima:anima:0.1.0`，Java 21，依赖 langchain4j、langchain4j-open-ai、javalin、jackson、slf4j-simple
 
 - [ ] **Step 1: 创建 pom.xml**
@@ -113,6 +115,7 @@
 cd d:\1111\code\Anima
 mvn validate
 ```
+
 Expected: BUILD SUCCESS
 
 - [ ] **Step 3: Commit**
@@ -127,9 +130,11 @@ git commit -m "feat: add Maven project skeleton with LangChain4j + Javalin"
 ### Task 2: 创建 DeepSeekProvider（LLM 流式调用封装）
 
 **Files:**
+
 - Create: `src/main/java/com/anima/llm/DeepSeekProvider.java`
 
 **Interfaces:**
+
 - Produces: `DeepSeekProvider` 类，构造时从环境变量读取 API Key，提供 `stream(systemPrompt, userMessage, listener)` 方法
 - Consumes: LangChain4j `OpenAiStreamingChatModel`、`StreamingChatResponseHandler`
 
@@ -244,6 +249,7 @@ public class DeepSeekProvider {
 cd d:\1111\code\Anima
 mvn compile
 ```
+
 Expected: BUILD SUCCESS
 
 - [ ] **Step 3: Commit**
@@ -258,9 +264,11 @@ git commit -m "feat: add DeepSeekProvider for streaming LLM calls"
 ### Task 3: 创建 ChatEndpoint（SSE 端点）
 
 **Files:**
+
 - Create: `src/main/java/com/anima/web/ChatEndpoint.java`
 
 **Interfaces:**
+
 - Consumes: `DeepSeekProvider.StreamListener`、`DeepSeekProvider.Usage`
 - Produces: `ChatEndpoint` 类，提供 `register(Javalin app)` 注册 POST /api/chat SSE 端点
 
@@ -387,6 +395,7 @@ public class ChatEndpoint {
 cd d:\1111\code\Anima
 mvn compile
 ```
+
 Expected: BUILD SUCCESS
 
 - [ ] **Step 3: Commit**
@@ -401,9 +410,11 @@ git commit -m "feat: add SSE chat endpoint for streaming responses"
 ### Task 4: 创建 AnimaApp（入口 + 静态文件服务）
 
 **Files:**
+
 - Create: `src/main/java/com/anima/AnimaApp.java`
 
 **Interfaces:**
+
 - Consumes: `DeepSeekProvider`、`ChatEndpoint`
 - Produces: 可运行的主类，启动 Javalin 在 8080 端口，提供 SSE 端点和静态 HTML
 
@@ -454,6 +465,7 @@ public class AnimaApp {
 cd d:\1111\code\Anima
 mvn compile
 ```
+
 Expected: BUILD SUCCESS
 
 - [ ] **Step 3: Commit**
@@ -468,6 +480,7 @@ git commit -m "feat: add AnimaApp entry point with Javalin server"
 ### Task 5: 创建终端风格 HTML 演示页面
 
 **Files:**
+
 - Create: `src/main/resources/web/index.html`
 
 **Spec:** 终端风格页面 — 黑底 (#1a1a2e)、等宽字体、绿色强调色、输入框在底部、消息区滚动
@@ -477,306 +490,383 @@ git commit -m "feat: add AnimaApp entry point with Javalin server"
 ```html
 <!DOCTYPE html>
 <html lang="zh-CN">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Anima — Terminal AI Agent</title>
-<style>
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Anima — Terminal AI Agent</title>
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
 
-body {
-    background: #1a1a2e;
-    color: #e0e0e0;
-    font-family: 'Cascadia Code', 'Consolas', 'Courier New', monospace;
-    height: 100vh;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-}
+      body {
+        background: #1a1a2e;
+        color: #e0e0e0;
+        font-family: "Cascadia Code", "Consolas", "Courier New", monospace;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
 
-/* Header */
-.header {
-    background: #16213e;
-    border-bottom: 1px solid #0f3460;
-    padding: 8px 16px;
-    font-size: 13px;
-    color: #a0a0b0;
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    flex-shrink: 0;
-}
-.header .brand { color: #e94560; font-weight: bold; }
-.header .dot { color: #00ff88; }
-.header .sep { color: #333; }
+      /* Header */
+      .header {
+        background: #16213e;
+        border-bottom: 1px solid #0f3460;
+        padding: 8px 16px;
+        font-size: 13px;
+        color: #a0a0b0;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        flex-shrink: 0;
+      }
+      .header .brand {
+        color: #e94560;
+        font-weight: bold;
+      }
+      .header .dot {
+        color: #00ff88;
+      }
+      .header .sep {
+        color: #333;
+      }
 
-/* Messages area */
-.messages {
-    flex: 1;
-    overflow-y: auto;
-    padding: 16px;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-.messages::-webkit-scrollbar { width: 6px; }
-.messages::-webkit-scrollbar-track { background: #1a1a2e; }
-.messages::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+      /* Messages area */
+      .messages {
+        flex: 1;
+        overflow-y: auto;
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .messages::-webkit-scrollbar {
+        width: 6px;
+      }
+      .messages::-webkit-scrollbar-track {
+        background: #1a1a2e;
+      }
+      .messages::-webkit-scrollbar-thumb {
+        background: #333;
+        border-radius: 3px;
+      }
 
-/* Message bubbles */
-.msg {
-    max-width: 85%;
-    padding: 8px 14px;
-    border-radius: 6px;
-    font-size: 14px;
-    line-height: 1.6;
-    white-space: pre-wrap;
-    word-break: break-word;
-    animation: fadeIn 0.15s ease;
-}
-@keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
-
-.msg.user {
-    align-self: flex-end;
-    background: #0f3460;
-    color: #e0e0e0;
-    border: 1px solid #1a4a8a;
-}
-.msg.assistant {
-    align-self: flex-start;
-    background: #16213e;
-    color: #d0d0d0;
-    border: 1px solid #1a3a5c;
-}
-.msg.thinking {
-    align-self: flex-start;
-    background: #1a1a2e;
-    color: #888;
-    border: 1px dashed #333;
-    font-style: italic;
-}
-.msg.error {
-    align-self: center;
-    background: #3a1010;
-    color: #ff6b6b;
-    border: 1px solid #8a2020;
-    font-size: 13px;
-}
-.msg.system {
-    align-self: center;
-    color: #555;
-    font-size: 12px;
-    border: none;
-    background: transparent;
-}
-
-/* Cursor blink for streaming */
-.msg.streaming::after {
-    content: "▊";
-    color: #e94560;
-    animation: blink 0.8s infinite;
-}
-@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
-
-/* Input area */
-.input-area {
-    background: #16213e;
-    border-top: 1px solid #0f3460;
-    padding: 12px 16px;
-    display: flex;
-    gap: 10px;
-    flex-shrink: 0;
-}
-.input-area input {
-    flex: 1;
-    background: #1a1a2e;
-    border: 1px solid #333;
-    color: #e0e0e0;
-    font-family: inherit;
-    font-size: 14px;
-    padding: 10px 14px;
-    border-radius: 4px;
-    outline: none;
-}
-.input-area input:focus { border-color: #e94560; }
-.input-area button {
-    background: #e94560;
-    color: white;
-    border: none;
-    font-family: inherit;
-    font-size: 14px;
-    padding: 10px 20px;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: background 0.2s;
-}
-.input-area button:hover { background: #d63850; }
-.input-area button:disabled { background: #555; cursor: not-allowed; }
-
-/* Status bar */
-.status {
-    background: #0f3460;
-    padding: 4px 16px;
-    font-size: 11px;
-    color: #888;
-    display: flex;
-    gap: 20px;
-    flex-shrink: 0;
-}
-.status .label { color: #666; }
-.status .value { color: #00ff88; }
-</style>
-</head>
-<body>
-
-<div class="header">
-    <span class="brand">⬡ Anima</span>
-    <span class="sep">|</span>
-    <span>v0.1.0</span>
-    <span class="sep">|</span>
-    <span>model: <span class="dot">●</span> deepseek-chat</span>
-    <span class="sep">|</span>
-    <span>mode: ask</span>
-</div>
-
-<div class="messages" id="messages">
-    <div class="msg system">Anima v0.1.0 — DeepSeek-native terminal agent. Type a message to begin.</div>
-</div>
-
-<div class="input-area">
-    <input type="text" id="input" placeholder="> 输入消息，Enter 发送..." autofocus />
-    <button id="sendBtn">Send</button>
-</div>
-
-<div class="status">
-    <span><span class="label">prompt:</span> <span class="value" id="statPrompt">0</span></span>
-    <span><span class="label">completion:</span> <span class="value" id="statCompletion">0</span></span>
-    <span id="statStatus"></span>
-</div>
-
-<script>
-const messagesEl = document.getElementById('messages');
-const inputEl = document.getElementById('input');
-const sendBtn = document.getElementById('sendBtn');
-const statPrompt = document.getElementById('statPrompt');
-const statCompletion = document.getElementById('statCompletion');
-const statStatus = document.getElementById('statStatus');
-
-let isStreaming = false;
-
-function addMessage(type, text) {
-    const div = document.createElement('div');
-    div.className = 'msg ' + type;
-    div.textContent = text;
-    messagesEl.appendChild(div);
-    messagesEl.scrollTop = messagesEl.scrollHeight;
-    return div;
-}
-
-function sendMessage() {
-    const text = inputEl.value.trim();
-    if (!text || isStreaming) return;
-    inputEl.value = '';
-    inputEl.disabled = true;
-    sendBtn.disabled = true;
-    isStreaming = true;
-    statStatus.textContent = 'thinking...';
-
-    addMessage('user', text);
-
-    const thinkingDiv = addMessage('thinking', '');
-    const responseDiv = addMessage('assistant', '');
-    responseDiv.classList.add('streaming');
-    let thinkingStarted = false;
-    let responseStarted = false;
-
-    fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: text })
-    }).then(response => {
-        if (!response.ok) throw new Error('HTTP ' + response.status);
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-        let buffer = '';
-
-        function process() {
-            reader.read().then(({ done, value }) => {
-                if (done) return;
-                buffer += decoder.decode(value, { stream: true });
-
-                // Parse SSE events
-                const lines = buffer.split('\n');
-                buffer = lines.pop() || '';
-                let eventType = '';
-                let eventData = '';
-
-                for (const line of lines) {
-                    if (line.startsWith('event: ')) {
-                        eventType = line.slice(7).trim();
-                    } else if (line.startsWith('data: ')) {
-                        eventData = line.slice(6);
-                        // Fire event
-                        if (eventType === 'thinking') {
-                            thinkingStarted = true;
-                            thinkingDiv.style.display = 'block';
-                            thinkingDiv.textContent += eventData.replace(/\\n/g, '\n');
-                        } else if (eventType === 'response') {
-                            if (!responseStarted) {
-                                thinkingDiv.classList.remove('thinking');
-                                thinkingDiv.classList.add('system');
-                                thinkingDiv.textContent = thinkingDiv.textContent || '(thought process hidden)';
-                                responseStarted = true;
-                            }
-                            responseDiv.textContent += eventData.replace(/\\n/g, '\n');
-                            statStatus.textContent = 'streaming';
-                        } else if (eventType === 'done') {
-                            try {
-                                const usage = JSON.parse(eventData);
-                                statPrompt.textContent = usage.promptTokens;
-                                statCompletion.textContent = usage.completionTokens;
-                            } catch(e) {}
-                        } else if (eventType === 'error') {
-                            try {
-                                const err = JSON.parse(eventData);
-                                addMessage('error', '✗ ' + err.message);
-                            } catch(e) {
-                                addMessage('error', '✗ Connection error');
-                            }
-                        }
-                        eventType = '';
-                        eventData = '';
-                    }
-                }
-                messagesEl.scrollTop = messagesEl.scrollHeight;
-                process();
-            }).catch(err => {
-                addMessage('error', '✗ ' + err.message);
-                finish();
-            });
+      /* Message bubbles */
+      .msg {
+        max-width: 85%;
+        padding: 8px 14px;
+        border-radius: 6px;
+        font-size: 14px;
+        line-height: 1.6;
+        white-space: pre-wrap;
+        word-break: break-word;
+        animation: fadeIn 0.15s ease;
+      }
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(4px);
         }
-        process();
-        return new Promise(() => {}); // never resolve — keep connection open
-    }).catch(err => {
-        addMessage('error', '✗ ' + err.message);
-        finish();
-    });
-}
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
 
-function finish() {
-    isStreaming = false;
-    inputEl.disabled = false;
-    sendBtn.disabled = false;
-    inputEl.focus();
-    statStatus.textContent = '';
-    // Remove streaming cursor from last assistant message
-    document.querySelectorAll('.msg.streaming').forEach(el => el.classList.remove('streaming'));
-}
+      .msg.user {
+        align-self: flex-end;
+        background: #0f3460;
+        color: #e0e0e0;
+        border: 1px solid #1a4a8a;
+      }
+      .msg.assistant {
+        align-self: flex-start;
+        background: #16213e;
+        color: #d0d0d0;
+        border: 1px solid #1a3a5c;
+      }
+      .msg.thinking {
+        align-self: flex-start;
+        background: #1a1a2e;
+        color: #888;
+        border: 1px dashed #333;
+        font-style: italic;
+      }
+      .msg.error {
+        align-self: center;
+        background: #3a1010;
+        color: #ff6b6b;
+        border: 1px solid #8a2020;
+        font-size: 13px;
+      }
+      .msg.system {
+        align-self: center;
+        color: #555;
+        font-size: 12px;
+        border: none;
+        background: transparent;
+      }
 
-inputEl.addEventListener('keydown', e => { if (e.key === 'Enter') sendMessage(); });
-sendBtn.addEventListener('click', sendMessage);
-</script>
-</body>
+      /* Cursor blink for streaming */
+      .msg.streaming::after {
+        content: "▊";
+        color: #e94560;
+        animation: blink 0.8s infinite;
+      }
+      @keyframes blink {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0;
+        }
+      }
+
+      /* Input area */
+      .input-area {
+        background: #16213e;
+        border-top: 1px solid #0f3460;
+        padding: 12px 16px;
+        display: flex;
+        gap: 10px;
+        flex-shrink: 0;
+      }
+      .input-area input {
+        flex: 1;
+        background: #1a1a2e;
+        border: 1px solid #333;
+        color: #e0e0e0;
+        font-family: inherit;
+        font-size: 14px;
+        padding: 10px 14px;
+        border-radius: 4px;
+        outline: none;
+      }
+      .input-area input:focus {
+        border-color: #e94560;
+      }
+      .input-area button {
+        background: #e94560;
+        color: white;
+        border: none;
+        font-family: inherit;
+        font-size: 14px;
+        padding: 10px 20px;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: background 0.2s;
+      }
+      .input-area button:hover {
+        background: #d63850;
+      }
+      .input-area button:disabled {
+        background: #555;
+        cursor: not-allowed;
+      }
+
+      /* Status bar */
+      .status {
+        background: #0f3460;
+        padding: 4px 16px;
+        font-size: 11px;
+        color: #888;
+        display: flex;
+        gap: 20px;
+        flex-shrink: 0;
+      }
+      .status .label {
+        color: #666;
+      }
+      .status .value {
+        color: #00ff88;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <span class="brand">⬡ Anima</span>
+      <span class="sep">|</span>
+      <span>v0.1.0</span>
+      <span class="sep">|</span>
+      <span>model: <span class="dot">●</span> deepseek-chat</span>
+      <span class="sep">|</span>
+      <span>mode: ask</span>
+    </div>
+
+    <div class="messages" id="messages">
+      <div class="msg system">
+        Anima v0.1.0 — DeepSeek-native terminal agent. Type a message to begin.
+      </div>
+    </div>
+
+    <div class="input-area">
+      <input
+        type="text"
+        id="input"
+        placeholder="> 输入消息，Enter 发送..."
+        autofocus
+      />
+      <button id="sendBtn">Send</button>
+    </div>
+
+    <div class="status">
+      <span
+        ><span class="label">prompt:</span>
+        <span class="value" id="statPrompt">0</span></span
+      >
+      <span
+        ><span class="label">completion:</span>
+        <span class="value" id="statCompletion">0</span></span
+      >
+      <span id="statStatus"></span>
+    </div>
+
+    <script>
+      const messagesEl = document.getElementById("messages");
+      const inputEl = document.getElementById("input");
+      const sendBtn = document.getElementById("sendBtn");
+      const statPrompt = document.getElementById("statPrompt");
+      const statCompletion = document.getElementById("statCompletion");
+      const statStatus = document.getElementById("statStatus");
+
+      let isStreaming = false;
+
+      function addMessage(type, text) {
+        const div = document.createElement("div");
+        div.className = "msg " + type;
+        div.textContent = text;
+        messagesEl.appendChild(div);
+        messagesEl.scrollTop = messagesEl.scrollHeight;
+        return div;
+      }
+
+      function sendMessage() {
+        const text = inputEl.value.trim();
+        if (!text || isStreaming) return;
+        inputEl.value = "";
+        inputEl.disabled = true;
+        sendBtn.disabled = true;
+        isStreaming = true;
+        statStatus.textContent = "thinking...";
+
+        addMessage("user", text);
+
+        const thinkingDiv = addMessage("thinking", "");
+        const responseDiv = addMessage("assistant", "");
+        responseDiv.classList.add("streaming");
+        let thinkingStarted = false;
+        let responseStarted = false;
+
+        fetch("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: text }),
+        })
+          .then((response) => {
+            if (!response.ok) throw new Error("HTTP " + response.status);
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = "";
+
+            function process() {
+              reader
+                .read()
+                .then(({ done, value }) => {
+                  if (done) return;
+                  buffer += decoder.decode(value, { stream: true });
+
+                  // Parse SSE events
+                  const lines = buffer.split("\n");
+                  buffer = lines.pop() || "";
+                  let eventType = "";
+                  let eventData = "";
+
+                  for (const line of lines) {
+                    if (line.startsWith("event: ")) {
+                      eventType = line.slice(7).trim();
+                    } else if (line.startsWith("data: ")) {
+                      eventData = line.slice(6);
+                      // Fire event
+                      if (eventType === "thinking") {
+                        thinkingStarted = true;
+                        thinkingDiv.style.display = "block";
+                        thinkingDiv.textContent += eventData.replace(
+                          /\\n/g,
+                          "\n",
+                        );
+                      } else if (eventType === "response") {
+                        if (!responseStarted) {
+                          thinkingDiv.classList.remove("thinking");
+                          thinkingDiv.classList.add("system");
+                          thinkingDiv.textContent =
+                            thinkingDiv.textContent ||
+                            "(thought process hidden)";
+                          responseStarted = true;
+                        }
+                        responseDiv.textContent += eventData.replace(
+                          /\\n/g,
+                          "\n",
+                        );
+                        statStatus.textContent = "streaming";
+                      } else if (eventType === "done") {
+                        try {
+                          const usage = JSON.parse(eventData);
+                          statPrompt.textContent = usage.promptTokens;
+                          statCompletion.textContent = usage.completionTokens;
+                        } catch (e) {}
+                      } else if (eventType === "error") {
+                        try {
+                          const err = JSON.parse(eventData);
+                          addMessage("error", "✗ " + err.message);
+                        } catch (e) {
+                          addMessage("error", "✗ Connection error");
+                        }
+                      }
+                      eventType = "";
+                      eventData = "";
+                    }
+                  }
+                  messagesEl.scrollTop = messagesEl.scrollHeight;
+                  process();
+                })
+                .catch((err) => {
+                  addMessage("error", "✗ " + err.message);
+                  finish();
+                });
+            }
+            process();
+            return new Promise(() => {}); // never resolve — keep connection open
+          })
+          .catch((err) => {
+            addMessage("error", "✗ " + err.message);
+            finish();
+          });
+      }
+
+      function finish() {
+        isStreaming = false;
+        inputEl.disabled = false;
+        sendBtn.disabled = false;
+        inputEl.focus();
+        statStatus.textContent = "";
+        // Remove streaming cursor from last assistant message
+        document
+          .querySelectorAll(".msg.streaming")
+          .forEach((el) => el.classList.remove("streaming"));
+      }
+
+      inputEl.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") sendMessage();
+      });
+      sendBtn.addEventListener("click", sendMessage);
+    </script>
+  </body>
 </html>
 ```
 
@@ -786,6 +876,7 @@ sendBtn.addEventListener('click', sendMessage);
 cd d:\1111\code\Anima
 mvn compile
 ```
+
 Expected: BUILD SUCCESS（HTML 在 resources 下，编译时自动拷贝）
 
 - [ ] **Step 3: Commit**
@@ -808,11 +899,13 @@ set DEEPSEEK_API_KEY=sk-your-key-here
 cd d:\1111\code\Anima
 mvn exec:java -Dexec.mainClass="com.anima.AnimaApp"
 ```
+
 Expected: 控制台输出 "Anima running at http://localhost:8080"
 
 - [ ] **Step 2: 打开浏览器验证**
 
 打开 http://localhost:8080，输入 "用Java写一个Hello World"，观察：
+
 - 思考过程（如果有）显示在灰色斜体框
 - 正文逐字显示在深蓝色框
 - 流式输出时有闪烁光标
@@ -821,6 +914,7 @@ Expected: 控制台输出 "Anima running at http://localhost:8080"
 - [ ] **Step 3: 验证错误处理**
 
 关闭 DeepSeek API Key（设为无效值），重启，输入消息：
+
 - 前端显示红色错误消息
 - 不会崩溃或白屏
 
