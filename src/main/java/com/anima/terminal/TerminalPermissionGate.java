@@ -28,10 +28,11 @@ public class TerminalPermissionGate implements PermissionGate {
         out.permissionPrompt(toolName, abbreviate(arguments, 100));
 
         while (true) {
-            String line = reader.readLine("  Choice (1-3): ");
+            String line = reader.readLine("> ");
             if (line == null) return false;
             String trimmed = line.trim();
-            if ("1".equals(trimmed) || trimmed.equalsIgnoreCase("y") || trimmed.equalsIgnoreCase("yes")) {
+            // Enter = Yes (option 1 is default, matches Claude Code behavior)
+            if (trimmed.isEmpty() || "1".equals(trimmed) || trimmed.equalsIgnoreCase("y") || trimmed.equalsIgnoreCase("yes")) {
                 return true;
             }
             if ("3".equals(trimmed) || trimmed.equalsIgnoreCase("n") || trimmed.equalsIgnoreCase("no")) {
@@ -41,7 +42,7 @@ public class TerminalPermissionGate implements PermissionGate {
                 out.plain("  (auto-approved for this session)");
                 return true;
             }
-            // invalid input: re-prompt
+            // invalid input: re-prompt silently
         }
     }
 
