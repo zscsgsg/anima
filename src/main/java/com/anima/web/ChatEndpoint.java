@@ -86,15 +86,21 @@ public class ChatEndpoint {
 
         CountDownLatch done = new CountDownLatch(1);
 
-        // Create a PermissionGate that waits for user confirmation via /api/confirm
+        // Create a PermissionGate that matches Claude Code's model:
+        // - Read-only tools (read_file, glob, grep) → auto-allow
+        // - Bash commands → ask for confirmation
+        // - File writes → ask for confirmation (when added)
         PermissionGate gate = (toolName, args) -> {
-            // Send confirmation request to frontend
+            // Read-only tools: no confirmation needed (matches Claude Code behavior)
+            if ("read_file".equals(toolName)) {
+                return true;
+            }
+            // Bash and future write tools: ask user
             try {
                 writeSseRaw(out, "event: tool_confirm\ndata: " +
                     json.writeValueAsString(Map.of("name", toolName, "args", args)) + "\n\n");
             } catch (Exception ignored) {}
 
-            // Wait for user response
             pendingConfirm = new CompletableFuture<>();
             try {
                 Boolean allowed = pendingConfirm.get(60, TimeUnit.SECONDS);
