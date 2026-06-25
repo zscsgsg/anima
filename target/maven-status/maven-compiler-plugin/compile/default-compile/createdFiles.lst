@@ -7,10 +7,12 @@ com\anima\tool\BashTool.class
 com\anima\agent\AgentLoop$LoopCallback.class
 com\anima\llm\DeepSeekProvider$ToolCall.class
 com\anima\tool\ReadFileTool.class
+com\anima\tool\WriteFileTool.class
 com\anima\llm\DeepSeekProvider$Usage.class
 com\anima\web\ChatEndpoint.class
 com\anima\agent\PermissionGate.class
 com\anima\agent\AgentLoop.class
+com\anima\tool\EditFileTool.class
 com\anima\agent\AgentLoop$1.class
 com\anima\tool\Tool.class
 com\anima\llm\DeepSeekProvider.class

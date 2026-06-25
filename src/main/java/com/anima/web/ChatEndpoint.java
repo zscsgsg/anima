@@ -3,9 +3,7 @@ package com.anima.web;
 import com.anima.agent.AgentLoop;
 import com.anima.agent.PermissionGate;
 import com.anima.llm.DeepSeekProvider;
-import com.anima.tool.BashTool;
-import com.anima.tool.ReadFileTool;
-import com.anima.tool.ToolRegistry;
+import com.anima.tool.*;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.javalin.Javalin;
 import io.javalin.http.Context;
@@ -39,6 +37,8 @@ public class ChatEndpoint {
         this.toolRegistry = new ToolRegistry();
         this.toolRegistry.register(new ReadFileTool());
         this.toolRegistry.register(new BashTool());
+        this.toolRegistry.register(new WriteFileTool());
+        this.toolRegistry.register(new EditFileTool());
     }
 
     public void register(Javalin app) {
@@ -95,7 +95,7 @@ public class ChatEndpoint {
             if ("read_file".equals(toolName)) {
                 return true;
             }
-            // Bash and future write tools: ask user
+            // Bash, write_file, edit_file: ask user
             try {
                 writeSseRaw(out, "event: tool_confirm\ndata: " +
                     json.writeValueAsString(Map.of("name", toolName, "args", args)) + "\n\n");
