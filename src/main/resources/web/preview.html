@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>Anima — Claude Code 1:1</title>
+<style>
+*{margin:0;padding:0}body{background:#1e1e1e;display:flex;justify-content:center;align-items:center;min-height:100vh;font-family:'Cascadia Code','Consolas','Courier New',monospace;font-size:13px;line-height:1.55}
+.win{width:880px;max-width:96vw;border:1px solid #1a1a1a;background:#0d0d0d;overflow:hidden;box-shadow:0 0 50px rgba(0,0,0,.6)}
+.win-body{padding:12px 16px;min-height:460px;max-height:68vh;overflow-y:auto}
+.win-body::-webkit-scrollbar{width:6px}
+.win-body::-webkit-scrollbar-track{background:#0d0d0d}
+.win-body::-webkit-scrollbar-thumb{background:#3a3a3a;border-radius:3px}
+
+.tl{margin:0;color:#d4d4d4;white-space:pre-wrap}
+.tl.dim{color:#6a6a6a}
+.tl.cyan{color:#2aa198}.tl.yl{color:#b58900}.tl.mg{color:#d33682}.tl.bl{color:#268bd2}.tl.gr{color:#859900}.tl.rd{color:#dc322f}.tl.gy{color:#808080}
+.tl.b{font-weight:bold}
+.tl.think{color:#808080;font-style:italic;padding-left:18px}
+
+/* Claude: ⏺ Tool(args) */
+.tc{margin:2px 0;color:#2aa198}.tc:before{content:"⏺ ";color:#2aa198;font-weight:bold}
+/* Claude:   ⎿ result text */  
+.td{color:#aaa;font-size:12px;padding-left:24px;margin:0}.td:before{content:"⎿ ";color:#6a6a6a}
+/* Claude:   ⎿ Done (X tools · X tokens · Xs) */
+.td.done{margin-top:4px}.td.done:before{content:"⎿ "}
+/* Claude error */
+.td.err{color:#dc322f}
+
+/* Permission block — exact Claude format */
+.permb{margin:4px 0}
+.permb .shell{color:#b58900;margin-bottom:2px}
+.permb .shell:before{content:"  "}
+.permb .q{color:#ccc;margin:2px 0}
+.permb .opt{color:#2aa198;font-weight:bold}
+.permb .rest{margin:0;padding-left:22px;color:#888;font-size:12px}
+
+.inp{margin-top:6px;display:flex;align-items:center}.inp .pr{color:#d33682;margin-right:6px}.inp .car{color:#2aa198;animation:blink .7s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+
+.st{background:#121212;padding:3px 16px;font-size:10px;color:#6a6a6a;display:flex;gap:14px}.st .stv{color:#2aa198}
+</style>
+</head>
+<body>
+<div class="win">
+<div class="win-body">
+
+<!-- ====== TURN 1: search ====== -->
+<div class="tl bl b">> 找一下所有 import DeepSeekProvider 的地方</div>
+
+<div class="tl think">thinking…</div>
+
+<div class="tc">Glob(**/*.java)</div>
+<div class="td">8 file(s) matching</div>
+
+<div class="tc">Grep(import.*DeepSeekProvider)</div>
+<div class="td">3 matches found</div>
+
+<div class="tl">找到了 3 处：</div>
+<div class="tl" style="padding-left:18px;font-size:12px;color:#aaa">AgentLoop.java — 第 3 行</div>
+<div class="tl" style="padding-left:18px;font-size:12px;color:#aaa">AnimaApp.java — 第 3 行</div>
+<div class="tl" style="padding-left:18px;font-size:12px;color:#aaa">ChatEndpoint.java — 第 5 行</div>
+
+<div class="td done">Done (2 tool uses · 1.2k tokens · 4.8s)</div>
+
+<!-- ====== TURN 2: edit version ====== -->
+<div class="tl bl b" style="margin-top:12px">> 帮我把 pom.xml 的版本改成 0.5.0</div>
+
+<div class="tl think">thinking…</div>
+
+<div class="tc">Read(pom.xml)</div>
+<div class="td">&lt;version&gt;0.1.0&lt;/version&gt;</div>
+
+<!-- Permission — Claude exact format -->
+<div class="permb">
+  <div class="shell">Edit pom.xml</div>
+  <div class="q">Do you want to proceed?</div>
+  <div class="rest"><span class="opt">> 1. Yes</span></div>
+  <div class="rest">  2. Yes, and don't ask again for Edit in this session</div>
+  <div class="rest">  3. No</div>
+</div>
+<div class="tl gy" style="padding-left:4px">1</div>
+
+<div class="tc">Edit(pom.xml)</div>
+<div class="td">Replaced &lt;version&gt;0.1.0 → 0.5.0</div>
+
+<!-- Permission — bash -->
+<div class="permb">
+  <div class="shell">Bash mvn compile -q</div>
+  <div class="q">Do you want to proceed?</div>
+  <div class="rest"><span class="opt">> 1. Yes</span></div>
+  <div class="rest">  2. Yes, and don't ask again for mvn compile -q in this project</div>
+  <div class="rest">  3. No</div>
+</div>
+<div class="tl gy" style="padding-left:4px">1</div>
+
+<div class="tc">Bash(mvn compile -q)</div>
+<div class="td">BUILD SUCCESS</div>
+
+<div class="tl">已完成。pom.xml 版本已改为 0.5.0，编译通过。</div>
+<div class="td done">Done (3 tool uses · 800 tokens · 6.2s)</div>
+
+<!-- ====== INPUT ====== -->
+<div class="inp"><span class="pr">> </span><span class="car">▌</span></div>
+
+</div>
+<div class="st">
+  <span class="stv">default</span> mode
+  · <span class="stv">deepseek-v4-flash</span>
+  · <span class="stv">7</span> tools
+  · 2.0k tokens used
+</div>
+</div>
+</body>
+</html>

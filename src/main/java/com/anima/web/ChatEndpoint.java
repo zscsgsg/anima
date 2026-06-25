@@ -40,6 +40,7 @@ public class ChatEndpoint {
         this.toolRegistry.register(new BashTool());
         this.toolRegistry.register(new WriteFileTool());
         this.toolRegistry.register(new EditFileTool());
+        this.toolRegistry.register(new MoveFileTool());
         this.toolRegistry.register(new LsTool());
         this.toolRegistry.register(new GlobTool());
         this.toolRegistry.register(new GrepTool());

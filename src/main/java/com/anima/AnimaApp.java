@@ -1,18 +1,28 @@
 package com.anima;
 
 import com.anima.llm.DeepSeekProvider;
+import com.anima.terminal.TerminalUI;
 import com.anima.web.ChatEndpoint;
 import io.javalin.Javalin;
 import io.javalin.http.staticfiles.Location;
 
+import java.util.Arrays;
+
 /**
  * Anima — DeepSeek-native terminal AI coding agent.
- * Step 1: streaming chat with HTML demo.
+ * Dual mode: terminal (--terminal) or web (default).
  */
 public class AnimaApp {
 
-    public static void main(String[] args) {
-        System.out.println("Anima v0.1.0 starting...");
+    public static void main(String[] args) throws Exception {
+        boolean terminalMode = Arrays.asList(args).contains("--terminal");
+
+        if (terminalMode) {
+            new TerminalUI().start();
+            return;
+        }
+
+        System.out.println("Anima v0.5.0 starting... (use --terminal for CLI mode)");
 
         DeepSeekProvider provider = new DeepSeekProvider();
         System.out.println("DeepSeek provider initialized.");
@@ -25,12 +35,8 @@ public class AnimaApp {
             config.http.asyncTimeout = 120_000L;
         });
 
-        // Register SSE endpoint
         new ChatEndpoint(provider).register(app);
-
-        // Health check
         app.get("/api/health", ctx -> ctx.result("OK"));
-
         app.start(8080);
         System.out.println("Anima running at http://localhost:8080");
     }
