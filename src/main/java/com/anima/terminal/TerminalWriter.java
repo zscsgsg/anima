@@ -49,10 +49,10 @@ public class TerminalWriter {
 
     /** ⎿ Done (X tool uses · Y tokens · Z.Zs) */
     public void done(int toolUses, int promptTokens, int completionTokens, double elapsedSec) {
-        styled(AttributedStyle.DEFAULT.foreground(AttributedStyle.WHITE + 8),
-            "  ⎿  Done (" + toolUses + " tool use" + (toolUses != 1 ? "s" : "") + " · " +
-            formatTokens(promptTokens + completionTokens) + " tokens · " + String.format("%.1f", elapsedSec) + "s)");
-        br();
+        String line = "\u001B[38;5;244m  ⎿  Done (" + toolUses + " tool use" + (toolUses != 1 ? "s" : "") + " · " +
+            formatTokens(promptTokens + completionTokens) + " tokens · " + String.format("%.1f", elapsedSec) + "s)\u001B[0m";
+        terminal.writer().println(line);
+        terminal.writer().flush();
     }
 
     public void respond(String text) {
@@ -82,14 +82,11 @@ public class TerminalWriter {
     // ── Status line ──
 
     public void statusLine(String mode, String model, int toolCount, int tokens) {
-        styled(AttributedStyle.DEFAULT.foreground(AttributedStyle.CYAN).bold(), mode);
-        terminal.writer().print(" mode · ");
-        styled(AttributedStyle.DEFAULT.foreground(AttributedStyle.CYAN), model);
-        terminal.writer().print(" · ");
-        styled(AttributedStyle.DEFAULT.foreground(AttributedStyle.CYAN), String.valueOf(toolCount));
-        terminal.writer().print(" tools · ");
-        styled(AttributedStyle.DEFAULT.foreground(AttributedStyle.CYAN), formatTokens(tokens));
-        terminal.writer().print(" tokens used");
+        String line = "\u001B[1;36m" + mode + "\u001B[0m mode · " +
+                      "\u001B[36m" + model + "\u001B[0m · " +
+                      "\u001B[36m" + toolCount + "\u001B[0m tools · " +
+                      "\u001B[36m" + formatTokens(tokens) + "\u001B[0m tokens used";
+        terminal.writer().println(line);
         terminal.writer().flush();
     }
 

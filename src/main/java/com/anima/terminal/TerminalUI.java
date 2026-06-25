@@ -86,9 +86,7 @@ public class TerminalUI {
             if (input.isEmpty()) continue;
             if (input.equalsIgnoreCase("/exit") || input.equalsIgnoreCase("/quit")) break;
 
-            tw.userInput(input);
-
-            // Counters for the "Done" line
+            // JLine already showed the input, don't echo it
             var stats = new Object() { int toolUses = 0; int promptT = 0; int compT = 0; long start = System.currentTimeMillis(); boolean thinkingDone = false; };
 
             tw.thinking();
