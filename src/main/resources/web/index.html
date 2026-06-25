@@ -1,0 +1,374 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Anima — Terminal AI Agent</title>
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        background: #1a1a2e;
+        color: #e0e0e0;
+        font-family: "Cascadia Code", "Consolas", "Courier New", monospace;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+
+      .header {
+        background: #16213e;
+        border-bottom: 1px solid #0f3460;
+        padding: 8px 16px;
+        font-size: 13px;
+        color: #a0a0b0;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        flex-shrink: 0;
+      }
+      .header .brand {
+        color: #e94560;
+        font-weight: bold;
+      }
+      .header .dot {
+        color: #00ff88;
+      }
+      .header .sep {
+        color: #333;
+      }
+
+      .messages {
+        flex: 1;
+        overflow-y: auto;
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .messages::-webkit-scrollbar {
+        width: 6px;
+      }
+      .messages::-webkit-scrollbar-track {
+        background: #1a1a2e;
+      }
+      .messages::-webkit-scrollbar-thumb {
+        background: #333;
+        border-radius: 3px;
+      }
+
+      .msg {
+        max-width: 85%;
+        padding: 8px 14px;
+        border-radius: 6px;
+        font-size: 14px;
+        line-height: 1.6;
+        white-space: pre-wrap;
+        word-break: break-word;
+        animation: fadeIn 0.15s ease;
+      }
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(4px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .msg.user {
+        align-self: flex-end;
+        background: #0f3460;
+        color: #e0e0e0;
+        border: 1px solid #1a4a8a;
+      }
+      .msg.assistant {
+        align-self: flex-start;
+        background: #16213e;
+        color: #d0d0d0;
+        border: 1px solid #1a3a5c;
+      }
+      .msg.thinking {
+        align-self: flex-start;
+        background: #1a1a2e;
+        color: #888;
+        border: 1px dashed #333;
+        font-style: italic;
+      }
+      .msg.error {
+        align-self: center;
+        background: #3a1010;
+        color: #ff6b6b;
+        border: 1px solid #8a2020;
+        font-size: 13px;
+      }
+      .msg.system {
+        align-self: center;
+        color: #555;
+        font-size: 12px;
+        border: none;
+        background: transparent;
+      }
+
+      .msg.streaming::after {
+        content: "\25CA";
+        color: #e94560;
+        animation: blink 0.8s infinite;
+      }
+      @keyframes blink {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0;
+        }
+      }
+
+      .input-area {
+        background: #16213e;
+        border-top: 1px solid #0f3460;
+        padding: 12px 16px;
+        display: flex;
+        gap: 10px;
+        flex-shrink: 0;
+      }
+      .input-area input {
+        flex: 1;
+        background: #1a1a2e;
+        border: 1px solid #333;
+        color: #e0e0e0;
+        font-family: inherit;
+        font-size: 14px;
+        padding: 10px 14px;
+        border-radius: 4px;
+        outline: none;
+      }
+      .input-area input:focus {
+        border-color: #e94560;
+      }
+      .input-area button {
+        background: #e94560;
+        color: white;
+        border: none;
+        font-family: inherit;
+        font-size: 14px;
+        padding: 10px 20px;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: background 0.2s;
+      }
+      .input-area button:hover {
+        background: #d63850;
+      }
+      .input-area button:disabled {
+        background: #555;
+        cursor: not-allowed;
+      }
+
+      .status {
+        background: #0f3460;
+        padding: 4px 16px;
+        font-size: 11px;
+        color: #888;
+        display: flex;
+        gap: 20px;
+        flex-shrink: 0;
+      }
+      .status .label {
+        color: #666;
+      }
+      .status .value {
+        color: #00ff88;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <span class="brand">⬡ Anima</span>
+      <span class="sep">|</span>
+      <span>v0.1.0</span>
+      <span class="sep">|</span>
+      <span>model: <span class="dot">●</span> deepseek-chat</span>
+      <span class="sep">|</span>
+      <span>mode: ask</span>
+    </div>
+
+    <div class="messages" id="messages">
+      <div class="msg system">
+        Anima v0.1.0 — DeepSeek-native terminal agent. Type a message to begin.
+      </div>
+    </div>
+
+    <div class="input-area">
+      <input
+        type="text"
+        id="input"
+        placeholder="> 输入消息，Enter 发送..."
+        autofocus
+      />
+      <button id="sendBtn">Send</button>
+    </div>
+
+    <div class="status">
+      <span
+        ><span class="label">prompt:</span>
+        <span class="value" id="statPrompt">0</span></span
+      >
+      <span
+        ><span class="label">completion:</span>
+        <span class="value" id="statCompletion">0</span></span
+      >
+      <span id="statStatus"></span>
+    </div>
+
+    <script>
+      const messagesEl = document.getElementById("messages");
+      const inputEl = document.getElementById("input");
+      const sendBtn = document.getElementById("sendBtn");
+      const statPrompt = document.getElementById("statPrompt");
+      const statCompletion = document.getElementById("statCompletion");
+      const statStatus = document.getElementById("statStatus");
+
+      let isStreaming = false;
+
+      function addMessage(type, text) {
+        const div = document.createElement("div");
+        div.className = "msg " + type;
+        div.textContent = text;
+        messagesEl.appendChild(div);
+        messagesEl.scrollTop = messagesEl.scrollHeight;
+        return div;
+      }
+
+      function sendMessage() {
+        const text = inputEl.value.trim();
+        if (!text || isStreaming) return;
+        inputEl.value = "";
+        inputEl.disabled = true;
+        sendBtn.disabled = true;
+        isStreaming = true;
+        statStatus.textContent = "thinking...";
+
+        addMessage("user", text);
+
+        const thinkingDiv = addMessage("thinking", "");
+        const responseDiv = addMessage("assistant", "");
+        responseDiv.classList.add("streaming");
+        let thinkingStarted = false;
+        let responseStarted = false;
+
+        fetch("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: text }),
+        })
+          .then((response) => {
+            if (!response.ok) throw new Error("HTTP " + response.status);
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = "";
+
+            function process() {
+              reader
+                .read()
+                .then(({ done, value }) => {
+                  if (done) {
+                    finish();
+                    return;
+                  }
+                  buffer += decoder.decode(value, { stream: true });
+
+                  const lines = buffer.split("\n");
+                  buffer = lines.pop() || "";
+                  let eventType = "";
+                  let eventData = "";
+
+                  for (const line of lines) {
+                    if (line.startsWith("event: ")) {
+                      eventType = line.slice(7).trim();
+                    } else if (line.startsWith("data: ")) {
+                      eventData = line.slice(6);
+                      if (eventType === "thinking") {
+                        thinkingStarted = true;
+                        thinkingDiv.style.display = "block";
+                        thinkingDiv.textContent += eventData.replace(
+                          /\\n/g,
+                          "\n",
+                        );
+                      } else if (eventType === "response") {
+                        if (!responseStarted) {
+                          thinkingDiv.classList.remove("thinking");
+                          thinkingDiv.classList.add("system");
+                          if (!thinkingStarted)
+                            thinkingDiv.style.display = "none";
+                          responseStarted = true;
+                        }
+                        responseDiv.textContent += eventData.replace(
+                          /\\n/g,
+                          "\n",
+                        );
+                        statStatus.textContent = "streaming";
+                      } else if (eventType === "done") {
+                        try {
+                          const usage = JSON.parse(eventData);
+                          statPrompt.textContent = usage.promptTokens;
+                          statCompletion.textContent = usage.completionTokens;
+                        } catch (e) {}
+                      } else if (eventType === "error") {
+                        try {
+                          const err = JSON.parse(eventData);
+                          addMessage("error", "✗ " + err.message);
+                        } catch (e) {
+                          addMessage("error", "✗ Connection error");
+                        }
+                      }
+                      eventType = "";
+                      eventData = "";
+                    }
+                  }
+                  messagesEl.scrollTop = messagesEl.scrollHeight;
+                  process();
+                })
+                .catch((err) => {
+                  if (err.name !== "AbortError") {
+                    addMessage("error", "✗ " + err.message);
+                  }
+                  finish();
+                });
+            }
+            process();
+          })
+          .catch((err) => {
+            addMessage("error", "✗ " + err.message);
+            finish();
+          });
+      }
+
+      function finish() {
+        isStreaming = false;
+        inputEl.disabled = false;
+        sendBtn.disabled = false;
+        inputEl.focus();
+        statStatus.textContent = "";
+        document
+          .querySelectorAll(".msg.streaming")
+          .forEach((el) => el.classList.remove("streaming"));
+      }
+
+      inputEl.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") sendMessage();
+      });
+      sendBtn.addEventListener("click", sendMessage);
+    </script>
+  </body>
+</html>
