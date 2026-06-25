@@ -24,5 +24,6 @@ com\anima\tool\ReadFileTool.class
 com\anima\agent\PermissionGate.class
 com\anima\agent\AgentLoop.class
 com\anima\tool\EditFileTool.class
+com\anima\terminal\MarkdownRenderer.class
 com\anima\tool\Tool.class
 com\anima\llm\DeepSeekProvider.class

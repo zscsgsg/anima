@@ -70,6 +70,8 @@ public class TerminalUI {
 
         var agent = new AgentLoop(provider, tools, 10, SYSTEM_PROMPT, gate);
 
+        var renderer = new MarkdownRenderer(tw);
+
         // Main loop
         while (true) {
             String line;
@@ -98,9 +100,10 @@ public class TerminalUI {
                     // thinking tokens are streamed internally; we just show "thinking…" once
                 }
                 @Override public void onResponse(String t) {
-                    tw.respondStream(t);
+                    renderer.feed(t);
                 }
                 @Override public void onToolStart(String name, String args) {
+                    renderer.flush();
                     tw.toolCall(name, args);
                 }
                 @Override public void onToolPermissionDenied(String name, String args) {
@@ -115,6 +118,7 @@ public class TerminalUI {
                     stats.compT += u.completionTokens();
                 }
                 @Override public void onComplete(String text) {
+                    renderer.flush();
                     tw.br();
                     tw.done(stats.toolUses, stats.promptT, stats.compT,
                         (System.currentTimeMillis() - stats.start) / 1000.0);

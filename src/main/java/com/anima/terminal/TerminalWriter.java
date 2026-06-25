@@ -97,6 +97,16 @@ public class TerminalWriter {
         terminal.writer().flush();
     }
 
+    /** Print styled text without newline — used by MarkdownRenderer for inline highlighting. */
+    public void printStyled(String text, AttributedStyle style) {
+        terminal.writer().print(new AttributedString(text, style).toAnsi());
+    }
+
+    /** Print raw text without newline — used by MarkdownRenderer. */
+    public void printRaw(String text) {
+        terminal.writer().print(text);
+    }
+
     public void dim(String text) {
         styled(AttributedStyle.DEFAULT.foreground(AttributedStyle.WHITE + 8), text);
         br();
