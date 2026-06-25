@@ -1,6 +1,7 @@
 com\anima\agent\AgentLoop$2.class
 com\anima\tool\ToolRegistry.class
 com\anima\llm\DeepSeekProvider$StreamListener.class
+com\anima\tool\LsTool.class
 com\anima\web\ChatEndpoint$1.class
 com\anima\AnimaApp.class
 com\anima\tool\BashTool.class

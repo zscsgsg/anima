@@ -39,6 +39,7 @@ public class ChatEndpoint {
         this.toolRegistry.register(new BashTool());
         this.toolRegistry.register(new WriteFileTool());
         this.toolRegistry.register(new EditFileTool());
+        this.toolRegistry.register(new LsTool());
     }
 
     public void register(Javalin app) {
@@ -92,7 +93,7 @@ public class ChatEndpoint {
         // - File writes → ask for confirmation (when added)
         PermissionGate gate = (toolName, args) -> {
             // Read-only tools: no confirmation needed (matches Claude Code behavior)
-            if ("read_file".equals(toolName)) {
+            if ("read_file".equals(toolName) || "ls".equals(toolName)) {
                 return true;
             }
             // Bash, write_file, edit_file: ask user
