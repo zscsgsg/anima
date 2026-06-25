@@ -1,111 +1,471 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-CN">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Anima — Step 2 Agent Demo</title>
-<style>
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-body{background:#0d1117;color:#c9d1d9;font-family:'Cascadia Code','Consolas','Courier New',monospace;height:100vh;display:flex;flex-direction:column;overflow:hidden}
-.header{background:#161b22;border-bottom:1px solid #30363d;padding:10px 20px;font-size:13px;display:flex;align-items:center;gap:16px;flex-shrink:0}
-.header .brand{color:#f78166;font-weight:bold;font-size:15px}
-.header .dot{color:#3fb950}
-.header .sep{color:#30363d}
-.header .right{margin-left:auto;color:#8b949e;font-size:12px}
-.messages{flex:1;overflow-y:auto;padding:16px 20px;display:flex;flex-direction:column;gap:10px}
-.messages::-webkit-scrollbar{width:5px}
-.messages::-webkit-scrollbar-track{background:#0d1117}
-.messages::-webkit-scrollbar-thumb{background:#30363d;border-radius:3px}
-.msg{max-width:88%;padding:10px 16px;border-radius:8px;font-size:14px;line-height:1.65;white-space:pre-wrap;word-break:break-word;animation:up .2s ease}
-@keyframes up{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-.msg.user{align-self:flex-end;background:#1f6feb33;color:#c9d1d9;border:1px solid #1f6feb55}
-.msg.assistant{align-self:flex-start;background:#161b22;color:#c9d1d9;border:1px solid #30363d}
-.msg.thinking{align-self:flex-start;background:#161b2266;color:#8b949e;border:1px dashed #30363d55;font-style:italic;font-size:13px}
-.msg.error{align-self:center;background:#3a1010;color:#f85149;border:1px solid #8a2020;font-size:13px}
-.msg.system{align-self:center;color:#484f58;font-size:12px;padding:4px 0;background:transparent;border:none}
-.msg.done{align-self:center;color:#3fb950;font-size:11px;padding:2px 0;background:transparent;border:none}
-.msg.tool{align-self:flex-start;background:#1a2332;border:1px solid #3fb95044;border-left:3px solid #3fb950;padding:8px 14px}
-.msg.tool .tname{color:#3fb950;font-weight:bold;font-size:12px;margin-bottom:4px}
-.msg.tool .targs{color:#8b949e;font-size:11px;margin-bottom:4px;font-family:monospace}
-.msg.tool .tresult{color:#c9d1d9;font-size:12px;max-height:120px;overflow-y:auto;white-space:pre-wrap}
-.msg.streaming::after{content:" ▌";color:#f78166;animation:blink .7s infinite}
-@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
-.input-area{background:#161b22;border-top:1px solid #30363d;padding:12px 20px;display:flex;gap:10px;flex-shrink:0}
-.input-area input{flex:1;background:#0d1117;border:1px solid #30363d;color:#c9d1d9;font-family:inherit;font-size:14px;padding:10px 14px;border-radius:6px;outline:none}
-.input-area input:focus{border-color:#f78166}
-.input-area input::placeholder{color:#484f58}
-.input-area button{background:#238636;color:#fff;border:1px solid #2ea043;font-family:inherit;font-size:14px;padding:10px 24px;border-radius:6px;cursor:pointer}
-.input-area button:hover{background:#2ea043}
-.input-area button:disabled{background:#21262d;border-color:#30363d;color:#484f58;cursor:not-allowed}
-.status{background:#161b22;border-top:1px solid #21262d;padding:6px 20px;font-size:11px;color:#8b949e;display:flex;gap:24px;flex-shrink:0;align-items:center}
-.status .st{color:#484f58}
-.status .val{color:#3fb950;font-weight:bold}
-</style>
-</head>
-<body>
-<div class="header">
-    <span class="brand">⬡ Anima</span>
-    <span class="sep">|</span> <span>v0.2.0</span>
-    <span class="sep">|</span> <span><span class="dot">●</span> deepseek-v4-flash</span>
-    <span class="right">Step 2 — Agent Loop + Tools</span>
-</div>
-<div class="messages" id="msgs">
-    <div class="msg system">╔══════════════════════════════════╗</div>
-    <div class="msg system">║  Anima v0.2.0 — Agent + 工具调用  ║</div>
-    <div class="msg system">║  试试："读一下 pom.xml"          ║</div>
-    <div class="msg system">╚══════════════════════════════════╝</div>
-</div>
-<div class="input-area">
-    <input type="text" id="inp" placeholder="> 输入消息..." autofocus />
-    <button id="btn">↵ 发送</button>
-</div>
-<div class="status">
-    <span><span class="st">工具:</span> <span class="val" id="statTools">read_file, bash</span></span>
-    <span><span class="st">步数:</span> <span class="val" id="statSteps">0</span></span>
-    <span id="statStatus" style="color:#f78166;"></span>
-</div>
-<script>
-const M=id=>document.getElementById(id);
-const msgs=M('msgs'),inp=M('inp'),btn=M('btn'),statTools=M('statTools'),statSteps=M('statSteps'),statS=M('statStatus');
-let streaming=false,step=0;
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Anima — Terminal Agent</title>
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        background: #0c0c0c;
+        color: #d4d4d4;
+        font-family: "Cascadia Code", "Consolas", "Courier New", monospace;
+        font-size: 13px;
+        line-height: 1.55;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+      .bar {
+        background: #161616;
+        border-bottom: 1px solid #2a2a2a;
+        padding: 6px 16px;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        flex-shrink: 0;
+        font-size: 12px;
+        color: #808080;
+      }
+      .bar b {
+        color: #7aa2f7;
+        font-weight: 600;
+      }
+      .bar .live {
+        color: #4ec94e;
+      }
+      .scroll {
+        flex: 1;
+        overflow-y: auto;
+        padding: 12px 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .scroll::-webkit-scrollbar {
+        width: 4px;
+      }
+      .scroll::-webkit-scrollbar-track {
+        background: #0c0c0c;
+      }
+      .scroll::-webkit-scrollbar-thumb {
+        background: #2a2a2a;
+        border-radius: 2px;
+      }
+      .blk {
+        animation: fade 0.18s ease;
+      }
+      @keyframes fade {
+        from {
+          opacity: 0;
+          transform: translateY(6px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      .blk.sys {
+        color: #606060;
+        font-size: 12px;
+        padding: 2px 0;
+      }
+      .blk.usr {
+        color: #7aa2f7;
+        margin-top: 4px;
+      }
+      .blk.usr::before {
+        content: "▸ ";
+        color: #4a4a4a;
+      }
+      .blk.asst {
+        color: #d4d4d4;
+        white-space: pre-wrap;
+        word-break: break-word;
+        padding-left: 4px;
+        border-left: 2px solid #2a2a2a;
+      }
+      .blk.asst.streaming::after {
+        content: " ▌";
+        color: #7aa2f7;
+        animation: blink 0.7s infinite;
+      }
+      @keyframes blink {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0;
+        }
+      }
+      .blk.think {
+        color: #6a6a6a;
+        font-style: italic;
+        font-size: 12px;
+        padding-left: 4px;
+      }
+      .blk.err {
+        color: #f44747;
+        padding: 6px 10px;
+        background: #1a0a0a;
+        border: 1px solid #3a1010;
+        border-radius: 4px;
+        font-size: 12px;
+      }
+      .blk.tool {
+        margin: 4px 0;
+      }
+      .blk.tool .head {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: #4ec94e;
+        font-size: 11px;
+        font-weight: 600;
+        margin-bottom: 3px;
+      }
+      .blk.tool .args {
+        color: #606060;
+        font-size: 11px;
+        margin-bottom: 4px;
+        font-family: monospace;
+      }
+      .blk.tool .res {
+        background: #121212;
+        border: 1px solid #1e1e1e;
+        border-radius: 4px;
+        padding: 8px 12px;
+        font-size: 12px;
+        color: #b0b0b0;
+        max-height: 140px;
+        overflow-y: auto;
+        white-space: pre-wrap;
+      }
+      .blk.tool .res.pending {
+        color: #808080;
+        font-style: italic;
+      }
 
-function add(type,txt){const d=document.createElement('div');d.className='msg '+type;d.textContent=txt;msgs.appendChild(d);msgs.scrollTop=msgs.scrollHeight;return d}
+      /* confirm row */
+      .confirm {
+        display: flex;
+        gap: 8px;
+        padding: 4px 0 8px;
+        align-items: center;
+      }
+      .confirm span {
+        color: #d4a54c;
+        font-size: 11px;
+        margin-right: 4px;
+      }
+      .confirm button {
+        border: none;
+        font-family: inherit;
+        font-size: 11px;
+        padding: 4px 14px;
+        border-radius: 3px;
+        cursor: pointer;
+        font-weight: 600;
+        transition: opacity 0.15s;
+      }
+      .confirm button.allow {
+        background: #1a3a1a;
+        color: #4ec94e;
+        border: 1px solid #2a5a2a;
+      }
+      .confirm button.allow:hover {
+        background: #2a5a2a;
+      }
+      .confirm button.deny {
+        background: #3a1a1a;
+        color: #f44747;
+        border: 1px solid #5a2a2a;
+      }
+      .confirm button.deny:hover {
+        background: #5a2a2a;
+      }
 
-function send(){
-    const t=inp.value.trim();if(!t||streaming)return;
-    inp.value='';inp.disabled=true;btn.disabled=true;streaming=true;step=0;statSteps.textContent='0';statS.textContent='● 思考中...';
-    add('user',t);
-    const thinkDiv=add('thinking','thinking...');
-    const respDiv=add('assistant','');respDiv.classList.add('streaming');
-    let responded=false;
+      .blk.div {
+        color: #2a2a2a;
+        font-size: 10px;
+        text-align: center;
+        padding: 2px 0;
+      }
+      .blk.done {
+        color: #4ec94e;
+        font-size: 11px;
+        padding: 2px 0;
+      }
+      .blk.denied {
+        color: #f44747;
+        font-size: 11px;
+        padding: 2px 0;
+        border-left: 2px solid #f44747;
+        padding-left: 6px;
+      }
+      .inp {
+        background: #161616;
+        border-top: 1px solid #2a2a2a;
+        padding: 8px 16px;
+        display: flex;
+        gap: 8px;
+        flex-shrink: 0;
+        align-items: center;
+      }
+      .inp span {
+        color: #7aa2f7;
+        font-size: 13px;
+      }
+      .inp input {
+        flex: 1;
+        background: transparent;
+        border: none;
+        color: #d4d4d4;
+        font-family: inherit;
+        font-size: 13px;
+        padding: 6px 0;
+        outline: none;
+      }
+      .inp input::placeholder {
+        color: #3a3a3a;
+      }
+      .st {
+        background: #121212;
+        border-top: 1px solid #1e1e1e;
+        padding: 3px 16px;
+        font-size: 10px;
+        color: #505050;
+        display: flex;
+        gap: 16px;
+        flex-shrink: 0;
+      }
+      .st span {
+        color: #4ec94e;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="bar">
+      <b>anima</b> v0.2.1 <span>·</span> deepseek-v4-flash <span>·</span>
+      <span class="live" id="live">⬤ idle</span>
+    </div>
+    <div class="scroll" id="msgs"></div>
+    <div class="inp">
+      <span>▸</span
+      ><input id="inp" placeholder="输入消息…" autofocus autocomplete="off" />
+    </div>
+    <div class="st">
+      tools: <span>read_file</span> <span>bash</span>
+      <span style="color: #505050">|</span> steps: <span id="stStep">0</span>
+    </div>
+    <script>
+      const M = (id) => document.getElementById(id),
+        msgs = M("msgs"),
+        inp = M("inp"),
+        live = M("live"),
+        stStep = M("stStep");
+      let busy = false,
+        step = 0;
 
-    fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:t})})
-    .then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);
-        const reader=r.body.getReader(),dec=new TextDecoder();let buf='',ev='',dat='';
-        function proc(){reader.read().then(({done,value})=>{if(done){finish();return}
-            buf+=dec.decode(value,{stream:true});const lines=buf.split('\n');buf=lines.pop()||'';
-            for(const ln of lines){
-                if(ln.startsWith('event: '))ev=ln.slice(7).trim();
-                else if(ln.startsWith('data: ')){dat=ln.slice(6);
-                    if(ev==='thinking'){thinkDiv.textContent='💭 '+dat.replace(/\\n/g,'\n')}
-                    else if(ev==='response'){if(!responded){responded=true;statS.textContent='▸ 生成中...'}respDiv.textContent+=dat.replace(/\\n/g,'\n')}
-                    else if(ev==='tool_start'){try{const o=JSON.parse(dat);step++;statSteps.textContent=step;
-                        const td=add('tool','');td.innerHTML='<div class="tname">🔧 '+o.name+'</div><div class="targs">args: '+escapeHtml(o.args||'')+'</div><div class="tresult" id="tr_'+step+'">⏳ executing...</div>';
-                        td.id='tool_'+step;}catch(e){}}
-                    else if(ev==='tool_result'){try{const o=JSON.parse(dat);
-                        const tr=M('tr_'+step);if(tr)tr.textContent=o.result||'(empty)';}catch(e){}}
-                    else if(ev==='done'){statS.textContent='✓';statSteps.textContent=step}
-                    else if(ev==='error'){try{add('error','✗ '+JSON.parse(dat).message)}catch(_){add('error','✗ 异常')}}
-                    ev='';dat='';
-                }
+      function add(cls, html) {
+        const d = document.createElement("div");
+        d.className = "blk " + cls;
+        d.innerHTML = html;
+        msgs.appendChild(d);
+        scrollDown();
+        return d;
+      }
+      function scrollDown() {
+        requestAnimationFrame(() => (msgs.scrollTop = msgs.scrollHeight));
+      }
+
+      async function send() {
+        const t = inp.value.trim();
+        if (!t || busy) return;
+        inp.value = "";
+        busy = true;
+        step = 0;
+        stStep.textContent = "0";
+        live.innerHTML = "⬤ thinking";
+        add("usr", esc(t));
+        const think = add("think", "thinking…");
+        const resp = add("asst", "");
+        resp.classList.add("streaming");
+        let respStarted = false;
+
+        fetch("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: t }),
+        })
+          .then((r) => {
+            if (!r.ok) throw new Error("HTTP " + r.status);
+            const reader = r.body.getReader(),
+              dec = new TextDecoder();
+            let buf = "",
+              ev = "",
+              dat = "";
+            function proc() {
+              reader
+                .read()
+                .then(({ done, value }) => {
+                  if (done) {
+                    finish();
+                    return;
+                  }
+                  buf += dec.decode(value, { stream: true });
+                  const lines = buf.split("\n");
+                  buf = lines.pop() || "";
+                  for (const ln of lines) {
+                    if (ln.startsWith("event: ")) ev = ln.slice(7).trim();
+                    else if (ln.startsWith("data: ")) {
+                      dat = ln.slice(6);
+                      if (ev === "thinking") {
+                        think.textContent = "  " + dat.replace(/\\n/g, "\n");
+                      } else if (ev === "response") {
+                        if (!respStarted) {
+                          respStarted = true;
+                          live.innerHTML = "⬤ streaming";
+                        }
+                        resp.textContent += dat.replace(/\\n/g, "\n");
+                      } else if (ev === "tool_confirm") {
+                        handleConfirm(dat);
+                      } else if (ev === "tool_denied") {
+                        try {
+                          const o = JSON.parse(dat);
+                          add("denied", "✕ denied: " + o.name);
+                        } catch (e) {}
+                      } else if (ev === "tool_start") {
+                        handleToolStart(dat);
+                      } else if (ev === "tool_result") {
+                        handleToolResult(dat);
+                      } else if (ev === "done") {
+                        live.innerHTML = "⬤ idle";
+                      } else if (ev === "error") {
+                        try {
+                          add("err", "✕ " + JSON.parse(dat).message);
+                        } catch (_) {
+                          add("err", "✕ 异常");
+                        }
+                      }
+                      ev = "";
+                      dat = "";
+                    }
+                  }
+                  scrollDown();
+                  proc();
+                })
+                .catch((err) => {
+                  if (err.name !== "AbortError") add("err", "✕ " + err.message);
+                  finish();
+                });
             }
-            msgs.scrollTop=msgs.scrollHeight;proc();
-        }).catch(err=>{if(err.name!=='AbortError')add('error','✗ '+err.message);finish()})}proc();
-    }).catch(err=>{add('error','✗ '+err.message);finish()});
-}
-function finish(){streaming=false;inp.disabled=false;btn.disabled=false;inp.focus();statS.textContent='';document.querySelectorAll('.msg.streaming').forEach(e=>e.classList.remove('streaming'))}
-function escapeHtml(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
-inp.addEventListener('keydown',e=>{if(e.key==='Enter')send()});btn.addEventListener('click',send);
-</script>
-</body>
+            proc();
+          })
+          .catch((err) => {
+            add("err", "✕ " + err.message);
+            finish();
+          });
+      }
+
+      async function handleConfirm(dat) {
+        try {
+          const o = JSON.parse(dat);
+          step++;
+          stStep.textContent = step;
+          live.innerHTML = "⬤ confirm";
+          const card = add(
+            "tool",
+            '<div class="head">⬡ confirm</div><div class="args">' +
+              esc(o.name || "") +
+              " " +
+              esc(o.args || "") +
+              "</div>",
+          );
+          const row = document.createElement("div");
+          row.className = "confirm";
+          row.innerHTML = "<span>Allow this tool call?</span>";
+          const allowBtn = document.createElement("button");
+          allowBtn.className = "allow";
+          allowBtn.textContent = "✓ Allow";
+          const denyBtn = document.createElement("button");
+          denyBtn.className = "deny";
+          denyBtn.textContent = "✕ Deny";
+          row.appendChild(allowBtn);
+          row.appendChild(denyBtn);
+          msgs.appendChild(row);
+          scrollDown();
+
+          const decision = await new Promise((resolve) => {
+            allowBtn.onclick = () => {
+              row.remove();
+              resolve(true);
+            };
+            denyBtn.onclick = () => {
+              row.remove();
+              resolve(false);
+            };
+          });
+          fetch("/api/confirm", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ allow: decision }),
+          });
+          if (!decision) card.remove();
+        } catch (e) {}
+      }
+
+      function handleToolStart(dat) {
+        try {
+          const o = JSON.parse(dat);
+          live.innerHTML = "⬤ executing";
+          const card = add(
+            "tool",
+            '<div class="head"><span class="ico">▸</span> ' +
+              o.name +
+              '</div><div class="args">' +
+              esc(o.args || "") +
+              '</div><div class="res pending">…</div>',
+          );
+          card.id = "tcard_" + step;
+        } catch (e) {}
+      }
+      function handleToolResult(dat) {
+        try {
+          const o = JSON.parse(dat);
+          const r = document.querySelector("#tcard_" + step + " .res");
+          if (r) {
+            r.textContent = o.result || "(empty)";
+            r.classList.remove("pending");
+          }
+        } catch (e) {}
+      }
+
+      function finish() {
+        busy = false;
+        inp.focus();
+        live.innerHTML = "⬤ idle";
+        document
+          .querySelectorAll(".blk.asst.streaming")
+          .forEach((e) => e.classList.remove("streaming"));
+      }
+      function esc(s) {
+        return s
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;");
+      }
+      inp.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") send();
+      });
+    </script>
+  </body>
 </html>

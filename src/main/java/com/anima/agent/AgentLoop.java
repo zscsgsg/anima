@@ -21,11 +21,18 @@ public class AgentLoop {
     private final List<ChatMessage> history;
     private final String systemPrompt;
 
+    private final PermissionGate permissionGate;
+
     public AgentLoop(DeepSeekProvider provider, ToolRegistry tools, int maxSteps, String systemPrompt) {
+        this(provider, tools, maxSteps, systemPrompt, null);
+    }
+
+    public AgentLoop(DeepSeekProvider provider, ToolRegistry tools, int maxSteps, String systemPrompt, PermissionGate permissionGate) {
         this.provider = provider;
         this.tools = tools;
         this.maxSteps = maxSteps;
         this.systemPrompt = systemPrompt;
+        this.permissionGate = permissionGate;
         this.history = new ArrayList<>();
         this.history.add(SystemMessage.from(systemPrompt));
     }
@@ -93,8 +100,19 @@ public class AgentLoop {
                 }
                 history.add(aiMsg);
 
-                // Execute tools
+                // Execute tools (with permission check)
                 for (var call : result.calls) {
+                    // Check permission gate
+                    if (permissionGate != null && !permissionGate.allow(call.name(), call.arguments())) {
+                        String denied = "Tool call denied by user: " + call.name();
+                        callback.onToolPermissionDenied(call.name(), call.arguments());
+                        history.add(ToolExecutionResultMessage.from(
+                            dev.langchain4j.agent.tool.ToolExecutionRequest.builder()
+                                .id(call.id()).name(call.name()).arguments(call.arguments()).build(),
+                            denied
+                        ));
+                        continue;
+                    }
                     callback.onToolStart(call.name(), call.arguments());
                     String toolResult;
                     try {
@@ -135,6 +153,7 @@ public class AgentLoop {
         void onThinking(String token);
         void onResponse(String token);
         void onToolStart(String toolName, String args);
+        void onToolPermissionDenied(String toolName, String args);
         void onToolResult(String toolName, String result);
         void onUsage(DeepSeekProvider.Usage usage);
         void onComplete(String finalText);

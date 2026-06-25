@@ -1,6 +1,7 @@
 package com.anima.web;
 
 import com.anima.agent.AgentLoop;
+import com.anima.agent.PermissionGate;
 import com.anima.llm.DeepSeekProvider;
 import com.anima.tool.BashTool;
 import com.anima.tool.ReadFileTool;
@@ -9,15 +10,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.javalin.Javalin;
 import io.javalin.http.Context;
 import jakarta.servlet.ServletOutputStream;
-import jakarta.servlet.http.HttpServletResponse;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 
 /**
- * SSE endpoint using AgentLoop for tool-using chat completions.
+ * SSE endpoint with interactive permission confirmation.
  */
 public class ChatEndpoint {
 
@@ -30,19 +29,38 @@ public class ChatEndpoint {
         Respond in the same language as the user.
         """;
 
-    private final AgentLoop agentLoop;
-    private final ObjectMapper json = new ObjectMapper();
     private final ToolRegistry toolRegistry;
+    private final ObjectMapper json = new ObjectMapper();
+
+    /** Holds the pending confirmation future for the current request. */
+    private volatile CompletableFuture<Boolean> pendingConfirm;
 
     public ChatEndpoint(DeepSeekProvider provider) {
         this.toolRegistry = new ToolRegistry();
         this.toolRegistry.register(new ReadFileTool());
         this.toolRegistry.register(new BashTool());
-        this.agentLoop = new AgentLoop(provider, toolRegistry, 10, SYSTEM_PROMPT);
     }
 
     public void register(Javalin app) {
         app.post("/api/chat", this::handleChat);
+        app.post("/api/confirm", this::handleConfirm);
+    }
+
+    /** POST /api/confirm — user clicked Allow or Deny. */
+    private void handleConfirm(Context ctx) {
+        try {
+            var body = json.readValue(ctx.body(), Map.class);
+            Boolean allowed = (Boolean) body.getOrDefault("allow", false);
+            var future = pendingConfirm;
+            if (future != null && !future.isDone()) {
+                future.complete(allowed);
+                ctx.result("{\"ok\":true}");
+            } else {
+                ctx.result("{\"ok\":false,\"reason\":\"no pending confirmation\"}");
+            }
+        } catch (Exception e) {
+            ctx.status(400).result("{\"error\":\"invalid\"}");
+        }
     }
 
     private void handleChat(Context ctx) {
@@ -66,44 +84,59 @@ public class ChatEndpoint {
         try { out = resp.getOutputStream(); resp.flushBuffer(); }
         catch (Exception e) { return; }
 
-        CountDownLatch latch = new CountDownLatch(1);
+        CountDownLatch done = new CountDownLatch(1);
+
+        // Create a PermissionGate that waits for user confirmation via /api/confirm
+        PermissionGate gate = (toolName, args) -> {
+            // Send confirmation request to frontend
+            try {
+                writeSseRaw(out, "event: tool_confirm\ndata: " +
+                    json.writeValueAsString(Map.of("name", toolName, "args", args)) + "\n\n");
+            } catch (Exception ignored) {}
+
+            // Wait for user response
+            pendingConfirm = new CompletableFuture<>();
+            try {
+                Boolean allowed = pendingConfirm.get(60, TimeUnit.SECONDS);
+                pendingConfirm = null;
+                return allowed != null && allowed;
+            } catch (Exception e) {
+                pendingConfirm = null;
+                return false;
+            }
+        };
+
+        var agentLoop = new AgentLoop(new DeepSeekProvider(), toolRegistry, 10, SYSTEM_PROMPT, gate);
 
         new Thread(() -> {
             agentLoop.run(message, new AgentLoop.LoopCallback() {
-                @Override public void onUserMessage(String t) {
-                    writeSse(out, "user", t);
-                }
-                @Override public void onThinking(String t) {
-                    writeSse(out, "thinking", t);
-                }
-                @Override public void onResponse(String t) {
-                    writeSse(out, "response", t);
-                }
+                @Override public void onUserMessage(String t) { writeSse(out, "user", t); }
+                @Override public void onThinking(String t) { writeSse(out, "thinking", t); }
+                @Override public void onResponse(String t) { writeSse(out, "response", t); }
                 @Override public void onToolStart(String name, String args) {
                     writeSse(out, "tool_start", jsonToolEvent(name, args, null));
+                }
+                @Override public void onToolPermissionDenied(String name, String args) {
+                    writeSse(out, "tool_denied", jsonToolEvent(name, args, "denied by user"));
                 }
                 @Override public void onToolResult(String name, String result) {
                     writeSse(out, "tool_result", jsonToolEvent(name, null, result));
                 }
                 @Override public void onUsage(DeepSeekProvider.Usage u) {
-                    try {
-                        writeSseRaw(out, "event: usage\ndata: " + json.writeValueAsString(Map.of("promptTokens", u.promptTokens(), "completionTokens", u.completionTokens())) + "\n\n");
-                    } catch (Exception ignored) {}
+                    try { writeSseRaw(out, "event: usage\ndata: " + json.writeValueAsString(Map.of("promptTokens", u.promptTokens(), "completionTokens", u.completionTokens())) + "\n\n"); } catch (Exception ignored) {}
                 }
                 @Override public void onComplete(String text) {
                     writeSseRaw(out, "event: done\ndata: {}\n\n");
-                    latch.countDown();
+                    done.countDown();
                 }
                 @Override public void onError(Throwable e) {
-                    try {
-                        writeSseRaw(out, "event: error\ndata: " + json.writeValueAsString(Map.of("message", e.getMessage() != null ? e.getMessage() : "Unknown error")) + "\n\n");
-                    } catch (Exception ignored) {}
-                    latch.countDown();
+                    try { writeSseRaw(out, "event: error\ndata: " + json.writeValueAsString(Map.of("message", e.getMessage() != null ? e.getMessage() : "Unknown error")) + "\n\n"); } catch (Exception ignored) {}
+                    done.countDown();
                 }
             });
         }).start();
 
-        try { latch.await(120, TimeUnit.SECONDS); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+        try { done.await(180, TimeUnit.SECONDS); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
         try { out.close(); } catch (Exception ignored) {}
     }
 
@@ -114,9 +147,7 @@ public class ChatEndpoint {
             if (args != null) map.put("args", args);
             if (result != null) map.put("result", result.length() > 2000 ? result.substring(0, 2000) + "..." : result);
             return json.writeValueAsString(map);
-        } catch (Exception e) {
-            return "{}";
-        }
+        } catch (Exception e) { return "{}"; }
     }
 
     private static void writeSse(ServletOutputStream out, String event, String data) {

@@ -9,6 +9,7 @@ com\anima\llm\DeepSeekProvider$ToolCall.class
 com\anima\tool\ReadFileTool.class
 com\anima\llm\DeepSeekProvider$Usage.class
 com\anima\web\ChatEndpoint.class
+com\anima\agent\PermissionGate.class
 com\anima\agent\AgentLoop.class
 com\anima\agent\AgentLoop$1.class
 com\anima\tool\Tool.class
