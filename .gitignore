@@ -1,4 +1,23 @@
+# Build artifacts
 target/
-.superpowers/
-.idea/
+lib/anima.jar
 *.class
+
+# Secrets & local config (never commit)
+.mcp.json
+ANIMA.local.md
+.anima/
+
+# Private docs (resume / interview / deploy notes — not for public repo)
+docs/
+.superpowers/
+
+# IDE & tooling
+.idea/
+.vscode/
+.qoder/
+
+# Misc local scratch
+-p/
+cp.txt
+fix.ps1
