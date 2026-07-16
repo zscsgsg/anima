@@ -1,0 +1,339 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Anima 终端布局对比 — 当前 vs Claude Code vs 改进方案</title>
+<style>
+:root {
+  --bg:#0d1117; --term-bg:#0a0e14; --border:#30363d; --text:#c9d1d9;
+  --muted:#8b949e; --accent:#58a6ff; --green:#3fb950; --yellow:#d2991d;
+  --red:#f85149; --purple:#bc8cff; --cyan:#39d2c0;
+  --user-blue:#58a6ff;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--text);font:13px/1.6 "Cascadia Code","Fira Code",Consolas,monospace;max-width:1300px;margin:0 auto;padding:16px;}
+h1{font-size:24px;margin-bottom:4px;}
+h2{font-size:15px;margin:24px 0 10px;padding-bottom:4px;border-bottom:1px solid var(--border);}
+.subtitle{color:var(--muted);margin-bottom:20px;}
+.compare-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:28px;}
+.compare-row.three{grid-template-columns:1fr 1fr 1fr;}
+.panel{border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--term-bg);}
+.panel-header{background:#1a1f2b;padding:6px 12px;font-size:11px;display:flex;justify-content:space-between;align-items:center;}
+.panel-header .tag{padding:1px 6px;border-radius:8px;font-size:10px;}
+.tag.bad{background:var(--red);color:#fff;}
+.tag.ok{background:var(--yellow);color:#000;}
+.tag.good{background:var(--green);color:#000;}
+.tag.ref{background:var(--accent);color:#000;}
+.panel-body{padding:10px 14px;font-size:12px;line-height:1.65;white-space:pre-wrap;word-break:break-all;min-height:200px;}
+.panel-body .dim{color:var(--muted);}
+.panel-body .think{color:var(--muted);font-style:italic;}
+.panel-body .phase{color:var(--purple);font-weight:bold;}
+.panel-body .resp{color:var(--text);}
+.panel-body .tool{color:var(--cyan);}
+.panel-body .result{color:var(--muted);}
+.panel-body .done{color:var(--muted);}
+.panel-body .status{color:var(--accent);}
+.panel-body .err{color:var(--red);}
+.panel-body .warn{color:var(--yellow);}
+.panel-body .banner-text{color:var(--purple);font-weight:bold;}
+.panel-body .banner-line{color:var(--muted);}
+.prompt{color:var(--user-blue);font-weight:bold;}
+.problem{background:#2d1518;border-left:3px solid var(--red);padding:8px 12px;margin:8px 0;font-size:11px;color:var(--red);}
+.fix{background:#152d1a;border-left:3px solid var(--green);padding:8px 12px;margin:8px 0;font-size:11px;color:var(--green);}
+
+/* Flow diagram */
+.flow{display:flex;align-items:flex-start;gap:8px;padding:12px 0;font-size:11px;flex-wrap:wrap;justify-content:center;}
+.flow-step{border:1px solid var(--border);border-radius:6px;padding:8px 12px;text-align:center;min-width:90px;background:var(--bg);}
+.flow-step.n{font-size:9px;color:var(--muted);}
+.flow-arrow{color:var(--muted);font-size:14px;align-self:center;}
+.flow-step.active{border-color:var(--accent);}
+.flow-step.problem{border-color:var(--red);}
+</style>
+</head>
+<body>
+
+<h1>⬡ Anima 终端布局对比</h1>
+<p class="subtitle">当前效果 vs Claude Code 标准 vs 改进方案 — 逐项诊断</p>
+
+<!-- ============ 三列对比 ============ -->
+<h2>一、完整一轮对话的终端输出对比</h2>
+
+<div class="compare-row three">
+  <!-- 当前 -->
+  <div class="panel">
+    <div class="panel-header"><span>🌡️ 当前 Anima</span><span class="tag bad">有问题</span></div>
+    <div class="panel-body">
+<span class="dim banner-line">═══════════════════════════════</span>
+<span class="banner-text">⬡ Anima v0.17.0</span>
+<span class="dim banner-line">═══════════════════════════════</span>
+<span class="dim">  新会话 — 输入 /help 查看可用命令</span>
+
+<span class="prompt">> 帮我创建一个 JWT 认证类</span>
+
+<span class="dim think">  thinking…</span>
+<span class="dim think">   ➤ 这个项目是一个Java Spring Boot应用...</span>
+<span class="dim think">需要检查pom.xml中是否已有jjwt依赖...</span>
+<span class="resp">好的，我先检查项目结构。</span>
+
+<span class="tool">⏺ grep(pom.xml "jjwt")</span>
+<span class="result">  ⎿  No matches found for "jjwt"</span>
+<span class="tool">⏺ read_file(pom.xml 1 50)</span>
+<span class="result">  ⎿  Line 1-50 of pom.xml:...</span>
+<span class="tool">⏺ write_file(src/main/java...</span>
+<span class="result">  ⎿  Wrote 45 lines to JwtUtil.java</span>
+<span class="dim done">  ⎿  Done (3 tool uses · 3.2k tokens · 8.5s)</span>
+<span class="dim status">default flash/deepseek-v4-flash · 28 tools · 3.2k tokens used</span>
+    </div>
+  </div>
+
+  <!-- Claude Code -->
+  <div class="panel">
+    <div class="panel-header"><span>🌟 Claude Code 标准</span><span class="tag ref">参照</span></div>
+    <div class="panel-body">
+<span class="dim">●</span> 我来帮你创建 JWT 认证类。
+
+<span class="dim">⏺ grep "jjwt" pom.xml</span>
+<span class="dim">  ⎿  No matches</span>
+<span class="dim">⏺ read pom.xml (lines 1-50)</span>
+<span class="dim">  ⎿  ...</span>
+<span class="dim">⏺ write src/main/java/.../JwtUtil.java</span>
+<span class="dim">  ⎿  Wrote 45 lines</span>
+<span class="dim">  ⎿  Done (3工具 · 3.2k · 8.5s)</span>
+<span class="dim">default · flash · 28 tools</span>
+    </div>
+  </div>
+
+  <!-- 改进方案 -->
+  <div class="panel">
+    <div class="panel-header"><span>✅ 改进方案</span><span class="tag good">目标</span></div>
+    <div class="panel-body">
+<span class="dim">●</span> 我来帮你创建 JWT 认证类。
+
+<span class="phase">  ⏺ grep(jjwt, pom.xml)</span>
+<span class="dim">  ⎿  No matches for "jjwt"</span>
+<span class="phase">  ⏺ read(pom.xml#L1-50)</span>
+<span class="dim">  ⎿  Line 1-50 of pom.xml: &lt;dependencies&gt;</span>
+<span class="phase">  ⏺ write(src/main/java/.../JwtUtil.java)</span>
+<span class="dim">  ⎿  Wrote 45 lines to JwtUtil.java</span>
+<span class="dim">  ⎿  Done (3工具 · 3.2k · 8.5s)</span>
+<span class="dim">default · flash/deepseek-v4-flash · 28 tools</span>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 问题诊断 ============ -->
+<h2>二、逐项问题诊断</h2>
+
+<div class="compare-row">
+  <div>
+    <div class="panel">
+      <div class="panel-header"><span>❌ 问题 1: thinking… 固定在开场</span><span class="tag bad">严重</span></div>
+      <div class="panel-body">
+<span class="think">当前代码 (TerminalUI.java:417):</span>
+<span class="think">  tw.thinking();  // ← 无论模型有没有思考，都先打印</span>
+<span class="think">  agent.run(input, turnCallback);</span>
+<span class="think">  // 之后才可能收到 onThinking → thinkingHeader</span>
+
+<span class="problem">问题:</span>
+<span class="problem">1. 模型如果没有推理内容(DeepSeek的thinking_tokens可能为空)</span>
+<span class="problem">   "thinking…" 就永远挂在那里，不会消失</span>
+<span class="problem">2. 即使有思考，也先打印了一个假的 "thinking…"</span>
+<span class="problem">   然后再覆盖 thinkingHeader，视觉上先闪一下</span>
+
+<span class="fix">修复:</span>
+<span class="fix">不要在 run() 前调用 thinking()</span>
+<span class="fix">改为: 只在真正收到 onThinking 时才打印</span>
+<span class="fix">如果没有思考内容就直接跳过</span>
+      </div>
+    </div>
+  </div>
+  <div>
+    <div class="panel">
+      <div class="panel-header"><span>❌ 问题 2: 工具调用格式不一致</span><span class="tag bad">中等</span></div>
+      <div class="panel-body">
+<span class="think">当前:  ⏺ toolName(args很长很长…)</span>
+<span class="think">Claude: ⏺ grep "pattern" file (简洁)</span>
+<span class="think">区别:</span>
+<span class="think">1. Anima 把 args 直接拼在括号里，太长</span>
+<span class="think">2. Claude 用空格分隔参数，更可读</span>
+<span class="think">3. 前缀不一致: Anima 无缩进，Claude 有</span>
+
+<span class="fix">修复:</span>
+<span class="fix">格式化为: ⏺ tool_name(arg1, arg2)</span>
+<span class="fix">对超长参数截断，保留关键信息</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="compare-row">
+  <div>
+    <div class="panel">
+      <div class="panel-header"><span>❌ 问题 3: Banner 太占空间</span><span class="tag ok">轻微</span></div>
+      <div class="panel-body">
+<span class="think">当前 banner 输出:</span>
+<span class="banner-line">═══════════════════════════</span>
+<span class="banner-text">⬡ Anima v0.17.0 — Reasonix...</span>
+<span class="banner-line">deepseek-v4-flash · 11 tools loaded</span>
+<span class="banner-line">═══════════════════════════</span>
+
+<span class="problem">问题:</span>
+<span class="problem">1. 语言混用(中英文混合说明)</span>
+<span class="problem">2. "11 tools loaded" 不对 — 实际是 28</span>
+<span class="problem">3. Claude Code 不打印 banner</span>
+
+<span class="fix">修复:</span>
+<span class="fix">精简为单行 + 启动信息用 dim 样式</span>
+      </div>
+    </div>
+  </div>
+  <div>
+    <div class="panel">
+      <div class="panel-header"><span>❌ 问题 4: 思考内容与回复混在一起</span><span class="tag ok">中等</span></div>
+      <div class="panel-body">
+<span class="think">当前流程:</span>
+<span class="think">  thinking…</span>
+<span class="think">  ➤ (推理内容流式)</span>
+<span class="think">  (回复内容流式)</span>
+<span class="think">  ⏺ tool_call</span>
+
+<span class="problem">问题: DeepSeek 的 reasoning_content</span>
+<span class="problem">和 content 是分离的，但 Anima</span>
+<span class="problem">把它们混在同一个视觉块里</span>
+
+<span class="fix">修复:</span>
+<span class="fix">用分隔线或颜色区分:</span>
+<span class="fix">推理阶段: 灰色斜体 (thinking)</span>
+<span class="fix">回复阶段: 正常颜色恢复</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 最终效果 ============ -->
+<h2>三、改进后的终端效果（预期）</h2>
+
+<div class="panel" style="margin-bottom:24px">
+  <div class="panel-header"><span>✅ 改进后 — 一次完整的 Agent 对话</span><span class="tag good">目标效果</span></div>
+  <div class="panel-body">
+<span class="dim">  anima v0.17.0 · deepseek-v4-flash · 28 tools · 31 skills · windows</span>
+
+<span class="prompt">> 帮我创建一个 JWT 认证工具类</span>
+<span class="dim" style="display:block;margin:2px 0">  ●</span>
+
+<span class="think">  需要创建一个 JWT 工具类，首先检查项目结构和现有依赖。
+pom.xml 中需要 jjwt 库，如果没有则添加。然后创建 JwtUtil.java
+放在 src/main/java/com/anima/util/ 下...</span>
+
+<span class="resp">好的，我来创建 JWT 认证工具类。先检查项目结构和依赖。</span>
+
+<span class="phase">  ⏺ grep("jjwt", "pom.xml")</span>
+<span class="dim">  ⎿  No matches for "jjwt" in pom.xml</span>
+
+<span class="phase">  ⏺ read_file("pom.xml", {offset:1, limit:80})</span>
+<span class="dim">  ⎿  Line 1-80 of pom.xml</span>
+<span class="dim">     &lt;dependencies&gt;</span>
+<span class="dim">       &lt;dependency&gt;</span>
+<span class="dim">         &lt;groupId&gt;com.auth0&lt;/groupId&gt;</span>
+<span class="dim">         &lt;artifactId&gt;java-jwt&lt;/artifactId&gt;</span>
+<span class="dim">       &lt;/dependency&gt;</span>
+<span class="dim">     &lt;/dependencies&gt;</span>
+
+<span class="resp">project already has java-jwt dependency. I'll create JwtUtil.java directly.</span>
+
+<span class="phase">  ⏺ read_file("src/main/java/com/anima", {})</span>
+<span class="dim">  ⎿  agent/  config/  hook/  llm/  lsp/  memory/  output/  ...</span>
+
+<span class="phase">  ⏺ write_file("src/main/java/com/anima/util/JwtUtil.java", ...)</span>
+<span class="dim">  ⎿  Wrote 55 lines to JwtUtil.java</span>
+
+<span class="dim">  ⎿  Done (4 tool uses · 4.8k tokens · 12.3s)</span>
+<span class="dim">  dual flash/deepseek-v4-flash · 28 tools · 4.8k tokens</span>
+  </div>
+</div>
+
+<!-- ============ 启动页对比 ============ -->
+<h2>四、启动页面对比</h2>
+
+<div class="compare-row">
+  <div class="panel">
+    <div class="panel-header"><span>🌡️ 当前启动</span><span class="tag bad">冗余</span></div>
+    <div class="panel-body">
+<span class="dim banner-line">═══════════════════════════════</span>
+<span class="banner-text">⬡ Anima v0.17.0 — Reasonix-aligned agent</span>
+<span class="dim banner-line">deepseek-v4-flash · 11 tools loaded</span>
+<span class="dim banner-line">═══════════════════════════════</span>
+
+<span class="dim">  已加载 31 个技能</span>
+<span class="dim">  双模型协作: pro(规划) + flash(执行)</span>
+<span class="dim">  检查点系统就绪 (0 个历史检查点)</span>
+<span class="dim">  新会话 — 输入 /help 查看可用命令</span>
+
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-header"><span>✅ 改进后启动</span><span class="tag good">精简</span></div>
+    <div class="panel-body">
+<span class="dim">  anima v0.17.0  deepseek-v4-flash  28 tools  31 skills  windows</span>
+
+<span class="dim">  ● pro(规划) + flash(执行)  ← 双模型就绪</span>
+<span class="dim">  ● 检查点系统就绪  ·  记忆系统就绪</span>
+<span class="dim">  ● 输入 /help 查看命令  ·  /sessions 恢复会话</span>
+<span class="dim">  ● 已加载: 31 skills  ·  28 tools  ·  0 MCP servers</span>
+
+<span class="dim">  ──────────────────────────────────────────</span>
+<span class="prompt">> </span>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 修复清单 ============ -->
+<h2>五、需要修复的代码点</h2>
+
+<table style="width:100%;border-collapse:collapse;font-size:12px;">
+<tr style="border-bottom:1px solid var(--border)">
+  <th style="padding:6px 10px;text-align:left;color:var(--muted)">#</th>
+  <th style="padding:6px 10px;text-align:left;color:var(--muted)">文件</th>
+  <th style="padding:6px 10px;text-align:left;color:var(--muted)">问题</th>
+  <th style="padding:6px 10px;text-align:left;color:var(--muted)">修复</th>
+</tr>
+<tr>
+  <td style="padding:6px 10px;color:var(--red)">1</td>
+  <td style="padding:6px 10px">TerminalUI.java:417</td>
+  <td style="padding:6px 10px">tw.thinking() 在任何回复前打印</td>
+  <td style="padding:6px 10px;color:var(--green)">删除 tw.thinking()，只在 onThinking 触发时显示</td>
+</tr>
+<tr>
+  <td style="padding:6px 10px;color:var(--yellow)">2</td>
+  <td style="padding:6px 10px">TerminalWriter.java:33</td>
+  <td style="padding:6px 10px">thinking() 输出固定文本</td>
+  <td style="padding:6px 10px;color:var(--green)">改为动态——仅在收到思考内容时由 thinkingHeader 显示</td>
+</tr>
+<tr>
+  <td style="padding:6px 10px;color:var(--yellow)">3</td>
+  <td style="padding:6px 10px">TerminalWriter.java:57</td>
+  <td style="padding:6px 10px">toolCall 格式 "⏺ name(args)" 太长</td>
+  <td style="padding:6px 10px;color:var(--green)">格式化为 "⏺ name(arg1, arg2)" 对超长参数截断</td>
+</tr>
+<tr>
+  <td style="padding:6px 10px;color:var(--ok)">4</td>
+  <td style="padding:6px 10px">TerminalWriter.java:20</td>
+  <td style="padding:6px 10px">banner 冗长 + 11 tools 硬编码错误</td>
+  <td style="padding:6px 10px;color:var(--green)">精简为单行: "anima v0.17.0 · model · N tools"</td>
+</tr>
+<tr>
+  <td style="padding:6px 10px;color:var(--ok)">5</td>
+  <td style="padding:6px 10px">TerminalUI.java:310</td>
+  <td style="padding:6px 10px">banner 文本太长，混用中英文</td>
+  <td style="padding:6px 10px;color:var(--green)">统一英文，纯信息展示</td>
+</tr>
+</table>
+
+<p style="color:var(--muted);font-size:11px;margin-top:28px;text-align:center">
+  对比参照: Claude Code 终端 + Reasonix Bubble Tea TUI<br>
+  Anima 使用 JLine3 行式模式（非TUI），对标 Claude Code REPL 交互风格
+</p>
+
+</body>
+</html>

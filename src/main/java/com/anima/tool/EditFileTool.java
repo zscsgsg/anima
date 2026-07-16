@@ -40,7 +40,14 @@ public class EditFileTool implements Tool {
     @Override
     public String execute(String arguments) throws Exception {
         var json = new com.fasterxml.jackson.databind.ObjectMapper().readTree(arguments);
-        String pathStr = json.has("file_path") ? json.get("file_path").asText() : json.get("path").asText();
+        String pathStr = json.has("file_path") ? json.get("file_path").asText() :
+                         json.has("path") ? json.get("path").asText() :
+                         json.has("file") ? json.get("file").asText() : null;
+        if (pathStr == null) {
+            return "Error: missing 'file_path', 'path', or 'file' argument";
+        }
+        if (!json.has("old_string")) return "Error: missing 'old_string' argument";
+        if (!json.has("new_string")) return "Error: missing 'new_string' argument";
         String oldStr = json.get("old_string").asText();
         String newStr = json.get("new_string").asText();
 
@@ -53,22 +60,37 @@ public class EditFileTool implements Tool {
         }
 
         String content = Files.readString(path);
-        int idx = content.indexOf(oldStr);
-        if (idx == -1) {
-            return "Error: old_string not found in file. Make sure the text matches exactly, including whitespace and indentation.";
-        }
-        int secondIdx = content.indexOf(oldStr, idx + 1);
-        if (secondIdx != -1) {
-            return "Error: old_string matches " + countMatches(content, oldStr) + " times in the file. It must match exactly once. Add more surrounding context to make it unique.";
+
+        // CRLF/LF adaptive matching (mirrors Reasonix's matchLineEndings):
+        // read_file returns LF-only (Files.readAllLines strips \r), but the actual
+        // file may use CRLF. If the literal old_string isn't found and the file
+        // contains \r\n, try converting old/new from LF to CRLF.
+        String searchOld = oldStr;
+        String replacement = newStr;
+        if (!content.contains(searchOld) && content.contains("\r\n")) {
+            String crlfOld = oldStr.replace("\r\n", "\n").replace("\n", "\r\n");
+            if (content.contains(crlfOld)) {
+                searchOld = crlfOld;
+                replacement = newStr.replace("\r\n", "\n").replace("\n", "\r\n");
+            }
         }
 
-        String result = content.substring(0, idx) + newStr + content.substring(idx + oldStr.length());
+        int idx = content.indexOf(searchOld);
+        if (idx == -1) {
+            return "Error: old_string not found in file. Make sure the text matches exactly, including whitespace and indentation. Tip: use read_file first to see the exact text.";
+        }
+        int secondIdx = content.indexOf(searchOld, idx + 1);
+        if (secondIdx != -1) {
+            return "Error: old_string matches " + countMatches(content, searchOld) + " times in the file. It must match exactly once. Add more surrounding context to make it unique.";
+        }
+
+        String result = content.substring(0, idx) + replacement + content.substring(idx + searchOld.length());
         Files.writeString(path, result);
 
         // Show a brief diff preview
         String preview = "Replaced in " + path.getFileName() + ":\n" +
-            "  - " + truncate(oldStr, 120) + "\n" +
-            "  + " + truncate(newStr, 120);
+            "  - " + truncate(searchOld, 120) + "\n" +
+            "  + " + truncate(replacement, 120);
         return preview;
     }
 

@@ -35,8 +35,12 @@ public class MoveFileTool implements Tool {
     @Override
     public String execute(String arguments) throws Exception {
         var json = new com.fasterxml.jackson.databind.ObjectMapper().readTree(arguments);
-        String srcStr = json.has("source") ? json.get("source").asText() : json.get("source_path").asText();
-        String dstStr = json.has("destination") ? json.get("destination").asText() : json.get("destination_path").asText();
+        String srcStr = json.has("source") ? json.get("source").asText() :
+                        json.has("source_path") ? json.get("source_path").asText() : null;
+        String dstStr = json.has("destination") ? json.get("destination").asText() :
+                        json.has("destination_path") ? json.get("destination_path").asText() : null;
+        if (srcStr == null) return "Error: missing 'source' argument";
+        if (dstStr == null) return "Error: missing 'destination' argument";
 
         Path src = Path.of(srcStr);
         if (!src.isAbsolute()) src = Path.of("").toAbsolutePath().resolve(srcStr).normalize();

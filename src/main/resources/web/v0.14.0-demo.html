@@ -1,0 +1,900 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>
+      Anima v0.14.0 — 功能演示 (Subagents + Hooks + Steer + Storm Breaker)
+    </title>
+    <style>
+      :root {
+        --bg: #0d1117;
+        --surface: #161b22;
+        --border: #30363d;
+        --text: #c9d1d9;
+        --dim: #8b949e;
+        --cyan: #58a6ff;
+        --green: #3fb950;
+        --yellow: #d2991d;
+        --red: #f85149;
+        --magenta: #bc8cff;
+        --orange: #db6d28;
+        --code-bg: #1c2128;
+      }
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        font-family: "Segoe UI", system-ui, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        min-height: 100vh;
+      }
+      header {
+        background: var(--surface);
+        border-bottom: 1px solid var(--border);
+        padding: 16px 24px;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+      }
+      header h1 {
+        font-size: 18px;
+        color: var(--magenta);
+      }
+      header .sub {
+        font-size: 13px;
+        color: var(--dim);
+        margin-top: 4px;
+      }
+      .tabs {
+        display: flex;
+        gap: 0;
+        border-bottom: 1px solid var(--border);
+        background: var(--surface);
+        padding: 0 24px;
+        position: sticky;
+        top: 53px;
+        z-index: 10;
+      }
+      .tab {
+        padding: 10px 20px;
+        cursor: pointer;
+        font-size: 14px;
+        color: var(--dim);
+        border-bottom: 2px solid transparent;
+        transition: 0.15s;
+        user-select: none;
+      }
+      .tab:hover {
+        color: var(--text);
+      }
+      .tab.active {
+        color: var(--cyan);
+        border-bottom-color: var(--cyan);
+      }
+      main {
+        max-width: 960px;
+        margin: 0 auto;
+        padding: 24px;
+      }
+      .panel {
+        display: none;
+      }
+      .panel.active {
+        display: block;
+      }
+      h2 {
+        font-size: 16px;
+        margin-bottom: 16px;
+        color: var(--cyan);
+      }
+      h3 {
+        font-size: 14px;
+        margin: 16px 0 8px;
+        color: var(--yellow);
+      }
+      .card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 16px;
+        margin-bottom: 16px;
+      }
+      .terminal {
+        background: var(--code-bg);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 12px 16px;
+        font-family: "Cascadia Code", "Fira Code", Consolas, monospace;
+        font-size: 13px;
+        line-height: 1.6;
+        overflow-x: auto;
+        white-space: pre-wrap;
+        word-break: break-all;
+      }
+      .prompt {
+        color: var(--green);
+      }
+      .steer {
+        color: var(--orange);
+      }
+      .think {
+        color: var(--dim);
+        font-style: italic;
+      }
+      .tool {
+        color: var(--cyan);
+      }
+      .result {
+        color: var(--dim);
+      }
+      .done {
+        color: var(--dim);
+      }
+      .error {
+        color: var(--red);
+      }
+      .warn {
+        color: var(--yellow);
+      }
+      .badge {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 10px;
+        font-size: 11px;
+        font-weight: 600;
+      }
+      .badge-new {
+        background: var(--green);
+        color: #000;
+      }
+      .badge-fix {
+        background: var(--yellow);
+        color: #000;
+      }
+      .badge-perf {
+        background: var(--magenta);
+        color: #fff;
+      }
+      .input-row {
+        display: flex;
+        gap: 8px;
+        margin-top: 12px;
+      }
+      .input-row input {
+        flex: 1;
+        background: var(--code-bg);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 8px 12px;
+        color: var(--text);
+        font-family: monospace;
+        font-size: 13px;
+      }
+      .input-row input:focus {
+        outline: none;
+        border-color: var(--cyan);
+      }
+      .btn {
+        padding: 8px 16px;
+        border-radius: 6px;
+        border: 1px solid var(--border);
+        background: var(--surface);
+        color: var(--text);
+        cursor: pointer;
+        font-size: 13px;
+        transition: 0.15s;
+      }
+      .btn:hover {
+        border-color: var(--cyan);
+        color: var(--cyan);
+      }
+      .btn-primary {
+        background: var(--cyan);
+        color: #000;
+        border-color: var(--cyan);
+      }
+      .btn-primary:hover {
+        opacity: 0.85;
+      }
+      .btn-danger {
+        border-color: var(--red);
+        color: var(--red);
+      }
+      .btn-danger:hover {
+        background: var(--red);
+        color: #000;
+      }
+      .info {
+        font-size: 12px;
+        color: var(--dim);
+        margin-top: 8px;
+      }
+      .feature-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+      }
+      @media (max-width: 700px) {
+        .feature-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+      .status {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 13px;
+      }
+      .status-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+      }
+      .status-dot.on {
+        background: var(--green);
+      }
+      .status-dot.off {
+        background: var(--red);
+      }
+      .config-json {
+        background: var(--code-bg);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 10px 14px;
+        font-family: monospace;
+        font-size: 12px;
+        line-height: 1.5;
+        color: var(--yellow);
+        overflow-x: auto;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+      }
+      th,
+      td {
+        text-align: left;
+        padding: 8px 12px;
+        border-bottom: 1px solid var(--border);
+      }
+      th {
+        color: var(--dim);
+        font-weight: 500;
+      }
+      .tool-ok {
+        color: var(--green);
+      }
+      .mode-plan {
+        color: var(--cyan);
+      }
+      .mode-default {
+        color: var(--dim);
+      }
+      .footer {
+        text-align: center;
+        margin-top: 32px;
+        padding: 16px;
+        color: var(--dim);
+        font-size: 12px;
+        border-top: 1px solid var(--border);
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>⬡ Anima v0.14.0</h1>
+      <div class="sub">
+        Subagents + Hooks + Mid-turn Steer + Storm Breaker &amp; Repeat Guard —
+        工程级健壮性增强
+      </div>
+    </header>
+
+    <div class="tabs">
+      <div class="tab active" data-panel="overview">📋 总览</div>
+      <div class="tab" data-panel="steer">🔄 Mid-turn Steer</div>
+      <div class="tab" data-panel="hooks">🪝 Hooks 系统</div>
+      <div class="tab" data-panel="subagent">🤖 Subagents</div>
+      <div class="tab" data-panel="storm">⛈️ Storm Breaker</div>
+    </div>
+
+    <main>
+      <!-- ====== OVERVIEW ====== -->
+      <div id="overview" class="panel active">
+        <h2>📋 v0.14.0 新增能力总览</h2>
+
+        <div class="feature-grid">
+          <div class="card">
+            <h3>
+              <span class="badge badge-new">NEW</span> &nbsp;Mid-turn Steer
+            </h3>
+            <p style="font-size: 13px; color: var(--dim)">
+              Agent 运行中，用户用
+              <code style="color: var(--orange)">!&lt;消息&gt;</code>
+              前缀注入实时指导。模型作为引导而非新任务处理，不破坏 prefix
+              cache。
+            </p>
+            <div class="status">
+              <span class="status-dot on"></span>已启用 — 终端输入
+              <code style="color: var(--orange)">!换个思路</code>
+            </div>
+          </div>
+          <div class="card">
+            <h3><span class="badge badge-new">NEW</span> &nbsp;Hooks 系统</h3>
+            <p style="font-size: 13px; color: var(--dim)">
+              4 种生命周期钩子：PreToolUse / PostToolUse / UserPromptSubmit /
+              Stop。通过 <code>.anima/settings.json</code> 配置 shell 命令。
+            </p>
+            <div class="status">
+              <span class="status-dot on"></span>自动加载 —
+              <code>/hooks</code> 查看已加载钩子
+            </div>
+          </div>
+          <div class="card">
+            <h3>
+              <span class="badge badge-new">NEW</span> &nbsp;Subagents (task
+              tool)
+            </h3>
+            <p style="font-size: 13px; color: var(--dim)">
+              模型可派生独立子智能体执行搜索/分析子任务。子 agent 拥有隔离
+              session + 过滤工具注册表，仅返回最终答案。
+            </p>
+            <div class="status">
+              <span class="status-dot on"></span>18 个内置工具（新增 task）
+            </div>
+          </div>
+          <div class="card">
+            <h3>
+              <span class="badge badge-new">NEW</span> &nbsp;Storm Breaker
+            </h3>
+            <p style="font-size: 13px; color: var(--dim)">
+              连续 3 次相同失败自动注入"改变策略"提示。同一工具成功 5
+              次触发重复操作警告。Tool Output 自动 32KB 截断。
+            </p>
+            <div class="status">
+              <span class="status-dot on"></span>自动激活 — 无需配置
+            </div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top: 16px">
+          <h3>🛠️ 终端交互速查</h3>
+          <table>
+            <tr>
+              <th>输入</th>
+              <th>行为</th>
+              <th>新增？</th>
+            </tr>
+            <tr>
+              <td><code style="color: var(--green)">/hooks</code></td>
+              <td>列出所有已加载的生命周期钩子</td>
+              <td><span class="badge badge-new">v0.14</span></td>
+            </tr>
+            <tr>
+              <td><code style="color: var(--orange)">!换个思路</code></td>
+              <td>向运行中 Agent 注入 mid-turn steer</td>
+              <td><span class="badge badge-new">v0.14</span></td>
+            </tr>
+            <tr>
+              <td><code>/model pro</code></td>
+              <td>热切换到 DeepSeek-V4-Pro</td>
+              <td>v0.12</td>
+            </tr>
+            <tr>
+              <td><code>/plan</code></td>
+              <td>切换 Plan Mode（只读规划）</td>
+              <td>v0.10</td>
+            </tr>
+            <tr>
+              <td><code>/compact</code></td>
+              <td>手动触发上下文压缩</td>
+              <td>v0.9</td>
+            </tr>
+          </table>
+        </div>
+      </div>
+
+      <!-- ====== STEER ====== -->
+      <div id="steer" class="panel">
+        <h2>🔄 Mid-turn Steer — 运行中注入指导</h2>
+
+        <div class="card">
+          <h3>🎯 使用场景</h3>
+          <p style="font-size: 13px; color: var(--dim); margin-bottom: 12px">
+            Agent 正在执行长任务（如多次工具调用），用户发现方向不对，可以直接用
+            <code style="color: var(--orange)">!消息</code>
+            注入纠偏指令，而不是等它完成后重新提问。
+          </p>
+          <div class="terminal">
+            <span class="prompt"
+              >> 帮我在整个项目中找到所有使用 Thread.sleep
+              的地方并替换为优雅方案</span
+            >
+
+            <span class="think">
+              ➤ 正在分析项目结构...我先用 grep 搜索 Thread.sleep
+              出现位置...</span
+            >
+            <span class="tool">⏺ grep(pattern="Thread\.sleep")</span>
+            <span class="result">
+              ⎿ src/main/java/com/anima/agent/AgentLoop.java:238 ⎿
+              src/main/java/com/anima/terminal/TerminalUI.java:150 ⎿
+              src/test/java/com/anima/AgentTest.java:45</span
+            >
+
+            <span style="color: var(--orange)"
+              >! 先列出文件，不要直接改 — 我还想确认一下范围</span
+            >
+            <span class="steer">
+              ⎿ Steer queued: 先列出文件，不要直接改 — 我还想确认一下范围</span
+            >
+
+            <span class="think">
+              ➤ [收到用户中途指导] 改为先读取文件确认范围...</span
+            >
+            <span class="tool"
+              >⏺ read_file(path="src/main/java/com/anima/agent/AgentLoop.java",
+              offset=230, limit=20)</span
+            >
+            <span class="result">
+              ⎿ 238→ try { latch.await(); } catch (InterruptedException e)
+              {</span
+            >
+            <span class="result">
+              ⎿ 239→ Thread.currentThread().interrupt(); break;</span
+            >
+            <span class="result"> ⎿ 240→ }</span>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>⚙️ 工作原理</h3>
+          <ul
+            style="
+              font-size: 13px;
+              color: var(--dim);
+              padding-left: 20px;
+              line-height: 2;
+            "
+          >
+            <li>
+              Steer 消息被加入队列（线程安全），<strong
+                >下一轮 loop 迭代消费</strong
+              >
+            </li>
+            <li>
+              注入到 session 时带
+              <code style="color: var(--orange)"
+                >[Mid-turn steer from user]</code
+              >
+              前缀标记
+            </li>
+            <li>模型视其为<strong>当前任务的引导</strong>，而非新任务</li>
+            <li>
+              终端以 <code style="color: var(--orange)">!消息</code> 触发，空
+              steer 不发送
+            </li>
+          </ul>
+        </div>
+
+        <div class="card">
+          <h3>🧪 试试看</h3>
+          <p class="info">
+            模拟 steer 注入效果（在运行中的终端输入 <code>!换个方向</code>）
+          </p>
+          <div class="input-row">
+            <input
+              id="steer-input"
+              type="text"
+              placeholder="!输入引导消息..."
+              onkeydown="if (event.key === 'Enter') sendSteer();"
+            />
+            <button class="btn btn-primary" onclick="sendSteer()">
+              注入 Steer
+            </button>
+          </div>
+          <div
+            id="steer-output"
+            class="terminal"
+            style="margin-top: 12px; max-height: 200px; overflow-y: auto"
+          >
+            <span class="dim">等待 steer 输入...</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ====== HOOKS ====== -->
+      <div id="hooks" class="panel">
+        <h2>🪝 Hooks 系统 — 生命周期钩子</h2>
+
+        <div class="card">
+          <h3>📄 配置文件示例：<code>.anima/settings.json</code></h3>
+          <div class="config-json">
+            { "hooks": { "PreToolUse": [ {
+            <span style="color: var(--dim)"
+              >// 在执行任何 bash 命令前，先运行安全检查脚本</span
+            >
+            "match": "bash", "command": "echo 'check passed' &amp;&amp; exit 0",
+            "timeout": 5000 }, {
+            <span style="color: var(--dim)">// 阻止危险的 rm -rf 命令</span>
+            "match": "bash", "command": "echo 'blocked: dangerous command'
+            &amp;&amp; exit 2" } ], "PostToolUse": [ {
+            <span style="color: var(--dim)">// 每次文件编辑后记录日志</span>
+            "match": "edit_file|write_file|multi_edit", "command": "echo
+            \"$(date): edited\" &gt;&gt; .anima/edit-log.txt" } ], "Stop": [ {
+            <span style="color: var(--dim)">// 每次 turn 结束时通知</span>
+            "command": "echo 'Turn completed at' $(date)" } ] } }
+          </div>
+          <p class="info">
+            文件位置：项目根目录 <code>.anima/settings.json</code>（项目级）或
+            <code>~/.anima/settings.json</code>（全局级）
+          </p>
+        </div>
+
+        <div class="card">
+          <h3>🎯 4 种事件类型</h3>
+          <table>
+            <tr>
+              <th>事件</th>
+              <th>触发时机</th>
+              <th>能否阻断</th>
+              <th>默认超时</th>
+            </tr>
+            <tr>
+              <td><code>PreToolUse</code></td>
+              <td>工具执行前</td>
+              <td><span class="warn">✅ exit 2 = block</span></td>
+              <td>5s</td>
+            </tr>
+            <tr>
+              <td><code>PostToolUse</code></td>
+              <td>工具执行后</td>
+              <td>❌ 仅记录</td>
+              <td>5s</td>
+            </tr>
+            <tr>
+              <td><code>UserPromptSubmit</code></td>
+              <td>用户提交消息时</td>
+              <td>❌ 仅记录</td>
+              <td>5s</td>
+            </tr>
+            <tr>
+              <td><code>Stop</code></td>
+              <td>Turn 完成时</td>
+              <td>❌ 仅记录</td>
+              <td>5s</td>
+            </tr>
+          </table>
+        </div>
+
+        <div class="card">
+          <h3>🧪 模拟钩子执行</h3>
+          <p class="info">选择一个事件，模拟工具调用前后钩子的执行流程</p>
+          <div class="input-row">
+            <input
+              id="hook-tool"
+              type="text"
+              value="bash"
+              placeholder="工具名..."
+              style="flex: 0.5"
+            />
+            <input
+              id="hook-args"
+              type="text"
+              value='{"command":"git status"}'
+              placeholder="参数..."
+              style="flex: 1"
+            />
+            <select
+              id="hook-event"
+              style="
+                background: var(--code-bg);
+                border: 1px solid var(--border);
+                color: var(--text);
+                padding: 8px 12px;
+                border-radius: 6px;
+                font-size: 13px;
+              "
+            >
+              <option value="pre">PreToolUse</option>
+              <option value="post">PostToolUse</option>
+              <option value="prompt">UserPromptSubmit</option>
+              <option value="stop">Stop</option>
+            </select>
+            <button class="btn btn-primary" onclick="simHook()">▶ 模拟</button>
+          </div>
+          <div
+            id="hook-output"
+            class="terminal"
+            style="margin-top: 12px; max-height: 250px; overflow-y: auto"
+          >
+            <span class="dim">选择事件并点击模拟...</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ====== SUBAGENT ====== -->
+      <div id="subagent" class="panel">
+        <h2>🤖 Subagents — task 工具</h2>
+
+        <div class="card">
+          <h3>🎯 核心概念</h3>
+          <p style="font-size: 13px; color: var(--dim); margin-bottom: 12px">
+            模型调用 <code>task</code> 工具时，Anima 创建一个<strong
+              >独立的子 Agent</strong
+            >：
+          </p>
+          <ul
+            style="
+              font-size: 13px;
+              color: var(--dim);
+              padding-left: 20px;
+              line-height: 2;
+            "
+          >
+            <li>
+              子 Agent 拥有<strong>独立的 session</strong>（不污染父上下文）
+            </li>
+            <li>
+              工具注册表<strong>自动过滤</strong>：排除 task
+              自身（防止递归）、排除 skill 工具
+            </li>
+            <li>
+              子 Agent 的 thinking / 工具调用 <strong>不展示给用户</strong>
+            </li>
+            <li><strong>仅最终答案</strong>返回给父 Agent</li>
+          </ul>
+        </div>
+
+        <div class="card">
+          <h3>📋 task 工具 Schema</h3>
+          <div class="config-json">
+            { "prompt": "找到项目中所有调用 Thread.sleep 的位置并汇总",
+            "description": "查找 Thread.sleep 用法", "tools": ["grep",
+            "read_file"],
+            <span style="color: var(--dim)">// 可选：工具白名单</span>
+            "max_steps": 5,
+            <span style="color: var(--dim)">// 可选：步数上限</span> "model":
+            "pro" <span style="color: var(--dim)">// 可选：模型覆盖</span> }
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>🎬 模拟效果</h3>
+          <div class="terminal">
+            <span class="prompt"
+              >> 帮我在项目中找到所有 Thread.sleep 调用并给出替换建议</span
+            >
+
+            <span class="think">
+              ➤ 这个任务可以拆解为多个独立子任务...我先派一个 sub-agent
+              去搜索...</span
+            >
+            <span class="tool">⏺ task(description="搜索 Thread.sleep")</span>
+
+            <span style="color: var(--dim); margin-left: 12px">
+              ┌─ sub-agent 启动 (独立 session) ─┐</span
+            >
+            <span style="color: var(--dim); margin-left: 12px">
+              │ [grep] searching... │</span
+            >
+            <span style="color: var(--dim); margin-left: 12px">
+              │ [read_file] 3 files loaded │</span
+            >
+            <span style="color: var(--dim); margin-left: 12px">
+              │ done — 5 tool uses │</span
+            >
+            <span style="color: var(--dim); margin-left: 12px">
+              └─────────────────────────────────┘</span
+            >
+
+            <span class="result">
+              ⎿ Sub-agent '搜索 Thread.sleep' completed. 找到 3 处 Thread.sleep
+              调用： 1. AgentLoop.java:238 — latch.await() 异常处理中的
+              interrupt() 2. TerminalUI.java:150 — (已正确处理) 3.
+              AgentTest.java:45 — 测试中用于等待 替换建议：... ── 5 tool uses:
+              [grep] [read_file] [read_file] [read_file] [grep]</span
+            >
+          </div>
+        </div>
+      </div>
+
+      <!-- ====== STORM BREAKER ====== -->
+      <div id="storm" class="panel">
+        <h2>⛈️ Storm Breaker &amp; Repeat Guard</h2>
+
+        <div class="card">
+          <h3>🎯 两种防护</h3>
+          <table>
+            <tr>
+              <th>机制</th>
+              <th>检测条件</th>
+              <th>响应</th>
+            </tr>
+            <tr>
+              <td><span class="badge badge-fix">Storm Breaker</span></td>
+              <td>连续 <strong>3 次</strong>相同工具 + 相同错误模式</td>
+              <td>自动注入："你已连续失败 3 次，改变策略"</td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-perf">Repeat Guard</span></td>
+              <td>同一工具在同一 turn 内成功 <strong>5 次</strong></td>
+              <td>自动注入："你已成功调用 X 5 次，进入下一步"</td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-new">Output Cap</span></td>
+              <td>工具输出超过 <strong>32KB</strong></td>
+              <td>自动截断 + 尾部标记 "...（truncated N bytes）"</td>
+            </tr>
+          </table>
+        </div>
+
+        <div class="card">
+          <h3>🎬 Storm Breaker 效果演示</h3>
+          <div class="terminal">
+            <span class="prompt"
+              >> 把 UserService.java 里的 findById 改成 Optional 返回</span
+            >
+
+            <span class="think"> ➤ 我先读取文件确认当前实现...</span>
+            <span class="tool"
+              >⏺ read_file(path="src/main/java/UserService.java")</span
+            >
+            <span class="result"> ⎿ (文件内容)</span>
+
+            <span class="tool"
+              >⏺ edit_file(path="src/main/java/UserService.java",
+              old_string="User findById", new_string="Optional&lt;User&gt;
+              findById")</span
+            >
+            <span class="error">
+              ⎿ Error: old_string not found — "User findById" does not match
+              exactly</span
+            >
+
+            <span class="tool"
+              >⏺ edit_file(path="src/main/java/UserService.java", old_string="
+              User findById", new_string=" Optional&lt;User&gt; findById")</span
+            >
+            <span class="error">
+              ⎿ Error: old_string not found — " User findById" does not match
+              exactly</span
+            >
+
+            <span class="tool"
+              >⏺ edit_file(path="src/main/java/UserService.java",
+              old_string="public User findById", new_string="public
+              Optional&lt;User&gt; findById")</span
+            >
+            <span class="error">
+              ⎿ Error: old_string not found — "public User findById" does not
+              match exactly</span
+            >
+
+            <span style="color: var(--yellow)"
+              >[SYSTEM] 你已连续 edit_file 失败 3 次。这是死循环 —
+              停止重试同样的方法。 改变策略：用 read_file
+              重新确认精确文本（不要猜测缩进），或换一种编辑方式。</span
+            >
+
+            <span class="think">
+              ➤ 你说得对 — 让我重新用 read_file 确认精确内容。</span
+            >
+            <span class="tool"
+              >⏺ read_file(path="src/main/java/UserService.java")</span
+            >
+            <span class="result"> ⎿ 42→ public User findById(Long id) {</span>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>🧪 错误签名算法</h3>
+          <p style="font-size: 13px; color: var(--dim)">
+            剥离数字和十六进制地址后比较，避免变量部分干扰匹配：<br />
+            <code style="color: var(--yellow)">"Error at line 42"</code> →
+            <code style="color: var(--yellow)">"Error at line N"</code><br />
+            <code style="color: var(--yellow)"
+              >"File not found: /tmp/abc123"</code
+            >
+            →
+            <code style="color: var(--yellow)"
+              >"File not found: /tmp/abcN"</code
+            >
+          </p>
+        </div>
+      </div>
+    </main>
+
+    <div class="footer">
+      Anima v0.14.0 — DeepSeek-native terminal AI coding agent · Java 21 +
+      LangChain4j · 编译 <span style="color: var(--green)">✓</span> 通过
+    </div>
+
+    <script>
+      // Tab switching
+      document.querySelectorAll(".tab").forEach((t) => {
+        t.addEventListener("click", () => {
+          document
+            .querySelectorAll(".tab")
+            .forEach((x) => x.classList.remove("active"));
+          document
+            .querySelectorAll(".panel")
+            .forEach((x) => x.classList.remove("active"));
+          t.classList.add("active");
+          document.getElementById(t.dataset.panel).classList.add("active");
+        });
+      });
+
+      // Steer simulation
+      function sendSteer() {
+        const inp = document.getElementById("steer-input");
+        const msg = inp.value.trim();
+        if (!msg) return;
+        const out = document.getElementById("steer-output");
+        const display = msg.startsWith("!") ? msg : "!" + msg;
+        const body = msg.startsWith("!") ? msg.substring(1).trim() : msg;
+        out.innerHTML += `<div><span class="steer">  ⎿  Steer queued: ${escapeHtml(display.length > 60 ? display.substring(0, 57) + "..." : display)}</span></div>`;
+        out.innerHTML += `<div style="margin-top:4px"><span class="think">  ➤ [收到中途指导] ${escapeHtml(body)} — 下一轮 loop 迭代时模型将看到此消息</span></div>`;
+        out.scrollTop = out.scrollHeight;
+        inp.value = "";
+        inp.focus();
+      }
+
+      // Hook simulation
+      function simHook() {
+        const tool =
+          document.getElementById("hook-tool").value.trim() || "bash";
+        const args = document.getElementById("hook-args").value.trim() || "{}";
+        const event = document.getElementById("hook-event").value;
+        const out = document.getElementById("hook-output");
+        out.innerHTML = "";
+
+        const eventNames = {
+          pre: "PreToolUse",
+          post: "PostToolUse",
+          prompt: "UserPromptSubmit",
+          stop: "Stop",
+        };
+        const eventName = eventNames[event];
+
+        out.innerHTML += `<div><span class="tool">⏺ Hook 触发: ${eventName}</span></div>`;
+        out.innerHTML += `<div><span class="dim">  ⎿  Payload: {"event":"${eventName}", "toolName":"${escapeHtml(tool)}", "toolArgs":${escapeHtml(args)}}</span></div>`;
+
+        if (event === "pre") {
+          out.innerHTML += `<div style="margin-top:8px"><span class="warn">  ⎿  Hook 退出码检查: exit 0 = pass / exit 2 = block</span></div>`;
+          // Simulate a random hook outcome
+          const outcomes = [
+            { code: 0, text: "✅ Hook passed — 工具调用继续", cls: "tool" },
+            {
+              code: 2,
+              text: '🚫 Hook blocked — 工具调用被拒绝: "blocked: dangerous command"',
+              cls: "error",
+            },
+            { code: 0, text: "✅ Hook passed — 工具调用继续", cls: "tool" },
+          ];
+          const r = outcomes[Math.floor(Math.random() * outcomes.length)];
+          out.innerHTML += `<div style="margin-top:8px"><span class="${r.cls}">${r.text}</span></div>`;
+        } else if (event === "post") {
+          out.innerHTML += `<div style="margin-top:8px"><span class="tool">✅ PostToolUse — 工具执行后记录日志 (non-blocking)</span></div>`;
+        } else if (event === "prompt") {
+          out.innerHTML += `<div style="margin-top:8px"><span class="tool">✅ UserPromptSubmit — 用户提交消息时触发 (non-blocking)</span></div>`;
+        } else {
+          out.innerHTML += `<div style="margin-top:8px"><span class="tool">✅ Stop — Turn 完成时触发 (non-blocking)</span></div>`;
+        }
+        out.scrollTop = out.scrollHeight;
+      }
+
+      function escapeHtml(s) {
+        return s
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;");
+      }
+    </script>
+  </body>
+</html>

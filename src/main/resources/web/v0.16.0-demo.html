@@ -1,0 +1,537 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Anima v0.16.0 — Reasonix 能力对齐 功能演示</title>
+    <style>
+      :root {
+        --bg: #0d1117;
+        --card: #161b22;
+        --border: #30363d;
+        --text: #c9d1d9;
+        --muted: #8b949e;
+        --accent: #58a6ff;
+        --green: #3fb950;
+        --purple: #bc8cff;
+        --orange: #d2991d;
+        --red: #f85149;
+        --cyan: #39d2c0;
+      }
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        background: var(--bg);
+        color: var(--text);
+        font:
+          14px/1.6 -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+        max-width: 1000px;
+        margin: 0 auto;
+        padding: 24px;
+      }
+      h1 {
+        font-size: 26px;
+        margin-bottom: 4px;
+      }
+      h1 .ver {
+        color: var(--accent);
+      }
+      h2 {
+        font-size: 18px;
+        margin: 28px 0 12px;
+        padding-bottom: 6px;
+        border-bottom: 1px solid var(--border);
+      }
+      h2 .dot {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        margin-right: 6px;
+        vertical-align: middle;
+      }
+      h2 .dot.g {
+        background: var(--green);
+      }
+      h2 .dot.p {
+        background: var(--purple);
+      }
+      h2 .dot.o {
+        background: var(--orange);
+      }
+      h2 .dot.c {
+        background: var(--cyan);
+      }
+      h2 .dot.r {
+        background: var(--red);
+      }
+      .subtitle {
+        color: var(--muted);
+        margin-bottom: 16px;
+      }
+      .pill-row {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+        margin-bottom: 20px;
+      }
+      .pill {
+        font-size: 11px;
+        padding: 2px 8px;
+        border-radius: 10px;
+        background: var(--card);
+        border: 1px solid var(--border);
+        color: var(--muted);
+      }
+      .pill.new {
+        border-color: var(--green);
+        color: var(--green);
+      }
+
+      /* Terminal card */
+      .term {
+        background: #0a0e14;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        margin-bottom: 16px;
+        overflow: hidden;
+        font-family: "Cascadia Code", "Fira Code", monospace;
+        font-size: 12.5px;
+        line-height: 1.7;
+      }
+      .term-header {
+        background: #1a1f2b;
+        padding: 4px 12px;
+        font-size: 11px;
+        color: var(--muted);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .term-header .phase {
+        color: var(--accent);
+      }
+      .term-body {
+        padding: 12px 16px;
+        white-space: pre-wrap;
+        word-break: break-all;
+      }
+      .term-body .think {
+        color: var(--muted);
+      }
+      .term-body .plan {
+        color: var(--purple);
+      }
+      .term-body .exec {
+        color: var(--accent);
+      }
+      .term-body .cmd {
+        color: var(--green);
+      }
+      .term-body .err {
+        color: var(--red);
+      }
+      .term-body .dim {
+        color: var(--muted);
+      }
+      .term-body .out {
+        color: var(--text);
+      }
+      .term-body .hl {
+        color: var(--orange);
+        font-weight: bold;
+      }
+
+      .code-block {
+        background: #1a1f2b;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 10px 14px;
+        margin: 8px 0;
+        font-family: "Cascadia Code", "Fira Code", monospace;
+        font-size: 12px;
+        white-space: pre;
+        overflow-x: auto;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 8px 0;
+      }
+      th,
+      td {
+        padding: 6px 10px;
+        text-align: left;
+        border-bottom: 1px solid var(--border);
+        font-size: 13px;
+      }
+      th {
+        color: var(--muted);
+        font-weight: normal;
+      }
+      td.file {
+        color: var(--accent);
+      }
+      td.lines {
+        color: var(--green);
+      }
+
+      .flow {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 12px 0;
+        font-size: 12px;
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+      .flow-box {
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 8px 14px;
+        background: var(--card);
+        text-align: center;
+        min-width: 100px;
+      }
+      .flow-box .label {
+        font-size: 10px;
+        color: var(--muted);
+      }
+      .flow-box .name {
+        font-size: 13px;
+        font-weight: bold;
+      }
+      .flow-arrow {
+        color: var(--muted);
+        font-size: 16px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>⬡ Anima <span class="ver">v0.16.0</span></h1>
+    <p class="subtitle">Reasonix 能力对齐版本 — 5 项核心智能体能力一次性交付</p>
+
+    <div class="pill-row">
+      <span class="pill new">🔄 Coordinator</span>
+      <span class="pill new">📸 Checkpoint/Rewind</span>
+      <span class="pill new">🎯 Goal Machine</span>
+      <span class="pill new">⚡ Parallel Tasks</span>
+      <span class="pill new">🔍 History Search</span>
+      <span class="pill">📦 已有: Compact/Plan/Steer/Storm</span>
+    </div>
+
+    <!-- ==================== 1. Coordinator ==================== -->
+    <h2><span class="dot c"></span>双模型协作 (Coordinator)</h2>
+
+    <p style="color: var(--muted); margin-bottom: 12px">
+      当配置了多个 provider（如 flash + pro），自动启用双模型模式。<br />
+      <b>Planner</b> (pro) 用只读工具分析任务产出计划 → <b>Executor</b> (flash)
+      接收计划并执行。两个模型独立会话，互不干扰 DeepSeek 缓存。
+    </p>
+
+    <div class="flow">
+      <div class="flow-box">
+        <div class="label">用户输入</div>
+        <div class="name">"实现 JWT 认证"</div>
+      </div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-box" style="border-color: var(--purple)">
+        <div class="label" style="color: var(--purple)">Planner (pro)</div>
+        <div class="name" style="color: var(--purple)">产出计划</div>
+      </div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-box" style="border-color: var(--accent)">
+        <div class="label" style="color: var(--accent)">Executor (flash)</div>
+        <div class="name" style="color: var(--accent)">执行任务</div>
+      </div>
+    </div>
+
+    <div class="term">
+      <div class="term-header">
+        <span>终端 — 双模型交互</span><span class="phase">pro · 规划</span>
+      </div>
+      <div class="term-body">
+        <span class="think"> (思考中…)</span>
+        <span class="plan"
+          >## 实施计划 1. 添加 jjwt 依赖到 pom.xml 2. 创建 JwtUtil.java — Token
+          生成/验证 3. 创建 JwtFilter.java — 请求拦截 4. 修改 SecurityConfig —
+          注册 Filter 5. 编写单元测试验证</span
+        >
+
+        <span class="dim"> ⎿ pro · 规划 → flash · 执行</span>
+
+        <span class="exec"
+          ># Anima executor handoff 正在执行步骤 1 — 添加 jjwt 依赖…</span
+        >
+        <span class="cmd"> ⎿ edit_file → pom.xml ✓</span>
+        <span class="dim"> ⎿ 完成 — 5 tool uses · 2341/567 tokens · 12.3s</span>
+        <span class="dim"> dual flash/deepseek-v4-flash · 21 tools</span>
+      </div>
+    </div>
+
+    <!-- ==================== 2. Checkpoint/Rewind ==================== -->
+    <h2><span class="dot g"></span>检查点与回退 (Checkpoint/Rewind)</h2>
+
+    <div class="term">
+      <div class="term-header"><span>终端 — /rewind 交互</span></div>
+      <div class="term-body">
+        <span class="dim">> /rewind</span>
+        Checkpoints (use /rewind &lt;turn&gt; [code|conversation|both]): turn-0
+        3 file(s) "add JWT dependency to pom.xml" turn-1 2 file(s) "implement
+        token generation in JwtUtil..." turn-2 1 file(s) "add filter to
+        SecurityConfig" Scope: code (files only), conversation (history only),
+        both (default)
+
+        <span class="dim">> /rewind 0 both</span>
+        <span class="out">Code rewind — 3 file(s) restored.</span>
+        <span class="out">Conversation rewind — trimmed 12 message(s).</span>
+      </div>
+    </div>
+
+    <p style="color: var(--muted); font-size: 12px">
+      每次编辑工具（write_file/edit_file/multi_edit/move_file）执行前自动快照。<br />
+      快照存储于
+      <code>.anima/sessions/&lt;session&gt;.ckpt/turn-N.json</code>，与 git
+      无关。
+    </p>
+
+    <!-- ==================== 3. Goal Machine ==================== -->
+    <h2><span class="dot o"></span>Goal 自主模式 (Goal Machine)</h2>
+
+    <p style="color: var(--muted); margin-bottom: 12px">
+      FSM 驱动的长周期自主任务。最多 50 轮自动延续，检测空闲/阻塞。支持
+      <code>[goal:complete]</code> / <code>[goal:blocked]</code> 信号。
+    </p>
+
+    <div class="term">
+      <div class="term-header"><span>终端 — /goal 交互</span></div>
+      <div class="term-body">
+        <span class="dim">> /goal 全面审查所有 Controller 的安全性并加固</span>
+        Goal set: 全面审查所有 Controller 的安全性并加固 The agent will pursue
+        this autonomously across turns.
+
+        <span class="think"> (思考中 — 第 1 轮)</span>
+        <span class="exec">搜索所有 Controller 文件…</span>
+        <span class="cmd"> ⎿ grep -> 7 files found</span>
+        <span class="cmd"> ⎿ read_file -> AuthController.java</span>
+        <span class="exec"
+          >发现 3 处潜在安全问题：缺少 CSRF token、未验证输入长度…</span
+        >
+
+        <span class="dim"> ⎿ Goal auto-continue (turn running)</span>
+        <span class="think"> (思考中 — 第 2 轮)</span>
+        <span class="exec">实施修复…</span>
+        <span class="cmd"> ⎿ edit_file -> AuthController.java ✓</span>
+        <span class="cmd"> ⎿ edit_file -> UserController.java ✓</span>
+
+        <span style="color: var(--green)">[goal:complete]</span>
+        <span class="dim"> ⎿ Goal: goal complete</span>
+      </div>
+    </div>
+
+    <!-- ==================== 4. Parallel Tasks ==================== -->
+    <h2><span class="dot p"></span>并行任务分发 (Parallel Tasks)</h2>
+
+    <p style="color: var(--muted); margin-bottom: 12px">
+      支持依赖图 (DAG) 的多子 agent
+      并发执行。结果自动汇总，前序任务产出通过文件传递给后续任务。
+    </p>
+
+    <div class="term">
+      <div class="term-header"><span>模型调用 — parallel_tasks</span></div>
+      <div class="term-body">
+        <span class="exec"
+          >模型调用 parallel_tasks({ tasks: [ { prompt: "审查 AuthController
+          安全性", description: "auth-audit" }, { prompt: "审查 UserController
+          安全性", description: "user-audit" }, { prompt:
+          "汇总前面两个审查结果并生成报告", description: "report", depends_on:
+          [0, 1] } ] })</span
+        >
+
+        <span class="cmd"> ⎿ task/sub-1 auth-audit → 正在运行…</span>
+        <span class="cmd"> ⎿ task/sub-2 user-audit → 正在运行…</span>
+        <span class="dim"> (auth-audit 和 user-audit 并发执行)</span>
+        <span class="cmd"> ⎿ task/sub-2 user-audit → ✓ 完成</span>
+        <span class="cmd"> ⎿ task/sub-1 auth-audit → ✓ 完成</span>
+        <span class="cmd">
+          ⎿ task/sub-3 report → 正在运行… (等待 depends_on 完成)</span
+        >
+        <span class="cmd"> ⎿ task/sub-3 report → ✓ 完成</span>
+
+        <span class="out"
+          >Completed 3 parallel tasks: ── auth-audit ── 发现 CSRF 缺失 +
+          输入未校验，共 3 处风险 ── user-audit ── 密码存储未加盐，建议使用
+          BCrypt ── report ── 综合审查报告： • AuthController: CSRF
+          缺失（高危）、输入未校验（中危） • UserController: 密码未加盐（高危）
+          建议优先修复：添加 CSRF token → 密码 BCrypt → 输入校验</span
+        >
+      </div>
+    </div>
+
+    <!-- ==================== 5. History Search ==================== -->
+    <h2><span class="dot r"></span>BM25 历史搜索 (History Search)</h2>
+
+    <p style="color: var(--muted); margin-bottom: 12px">
+      轻量级 BM25 全文检索（无外部依赖），索引所有
+      <code>.jsonl</code> 会话文件。<br />
+      支持 <b>search</b> 和 <b>around</b> 两种操作，让模型能查询历史决策和命令。
+    </p>
+
+    <div class="term">
+      <div class="term-header"><span>模型调用 — history 工具</span></div>
+      <div class="term-body">
+        <span class="exec"
+          >模型调用 history({ operation: "search", query: "BCrypt password"
+          })</span
+        >
+
+        <span class="out"
+          >History search results for "BCrypt password": 1. score=12.345
+          session=anima-20260626-143022 msg_index=47 kind=assistant_text
+          role=assistant session_path: anima-20260626-143022.jsonl snippet:
+          密码存储方案：使用 BCrypt 加盐哈希，配置在 SecurityConfig 中… 2.
+          score=8.210 session=anima-20260625-091105 msg_index=23 kind=tool_input
+          role=assistant tool=edit_file session_path:
+          anima-20260625-091105.jsonl snippet: 将 passwordEncoder 替换为
+          BCryptPasswordEncoder… Use operation="around" to read nearby
+          messages.</span
+        >
+
+        <span class="exec"
+          >模型调用 history({ operation: "around", session_path:
+          "anima-20260626-143022.jsonl", message_index: 47 })</span
+        >
+
+        <span class="out"
+          >History around anima-20260626-143022.jsonl message_index=47: [user]
+          用户密码应该怎么存储？ [assistant] 建议使用 BCrypt
+          进行加盐哈希。以下是具体方案： 1. 在 pom.xml 添加
+          spring-security-crypto 2. 在 SecurityConfig 配置 BCryptPasswordEncoder
+          3. 注册时对密码做 encode，登录时用 matches 验证</span
+        >
+      </div>
+    </div>
+
+    <!-- ==================== 文件清单 ==================== -->
+    <h2>交付文件清单</h2>
+    <table>
+      <tr>
+        <th>文件</th>
+        <th>变更</th>
+        <th>行数</th>
+      </tr>
+      <tr>
+        <td class="file">agent/Coordinator.java</td>
+        <td>新增</td>
+        <td class="lines">377</td>
+      </tr>
+      <tr>
+        <td class="file">agent/CheckpointStore.java</td>
+        <td>新增</td>
+        <td class="lines">208</td>
+      </tr>
+      <tr>
+        <td class="file">agent/GoalMachine.java</td>
+        <td>新增</td>
+        <td class="lines">278</td>
+      </tr>
+      <tr>
+        <td class="file">agent/AgentLoop.java</td>
+        <td>修改</td>
+        <td class="lines">+90</td>
+      </tr>
+      <tr>
+        <td class="file">tool/ParallelTasksTool.java</td>
+        <td>新增</td>
+        <td class="lines">339</td>
+      </tr>
+      <tr>
+        <td class="file">tool/HistoryTool.java</td>
+        <td>新增</td>
+        <td class="lines">221</td>
+      </tr>
+      <tr>
+        <td class="file">tool/TaskTool.java</td>
+        <td>修改</td>
+        <td class="lines">+5</td>
+      </tr>
+      <tr>
+        <td class="file">retrieval/Bm25Index.java</td>
+        <td>新增</td>
+        <td class="lines">185</td>
+      </tr>
+      <tr>
+        <td class="file">terminal/TerminalUI.java</td>
+        <td>修改</td>
+        <td class="lines">+95</td>
+      </tr>
+      <tr>
+        <td class="file">terminal/SlashDispatcher.java</td>
+        <td>修改</td>
+        <td class="lines">+95</td>
+      </tr>
+      <tr>
+        <td class="file">config/AnimaConfig.java</td>
+        <td>修改</td>
+        <td class="lines">+6</td>
+      </tr>
+      <tr style="border-top: 2px solid var(--border)">
+        <td class="file"><b>合计 11 文件</b></td>
+        <td><b>6 新增 + 5 修改</b></td>
+        <td class="lines"><b>~1900 行</b></td>
+      </tr>
+    </table>
+
+    <!-- ==================== 命令速查 ==================== -->
+    <h2>新增命令速查</h2>
+    <table>
+      <tr>
+        <th>命令</th>
+        <th>效果</th>
+      </tr>
+      <tr>
+        <td><code>/rewind</code></td>
+        <td>列出所有检查点</td>
+      </tr>
+      <tr>
+        <td><code>/rewind &lt;turn&gt; code</code></td>
+        <td>回退文件到指定轮次</td>
+      </tr>
+      <tr>
+        <td><code>/rewind &lt;turn&gt; both</code></td>
+        <td>回退文件 + 截断对话</td>
+      </tr>
+      <tr>
+        <td><code>/goal &lt;objective&gt;</code></td>
+        <td>设置自动延续目标</td>
+      </tr>
+      <tr>
+        <td><code>/goal</code></td>
+        <td>查看当前目标状态</td>
+      </tr>
+      <tr>
+        <td><code>/goal clear</code></td>
+        <td>清除当前目标</td>
+      </tr>
+    </table>
+
+    <p
+      style="
+        color: var(--muted);
+        font-size: 11px;
+        margin-top: 32px;
+        text-align: center;
+      "
+    >
+      Anima v0.16.0 — Built with LangChain4j + DeepSeek · Reasonix-aligned agent
+      capabilities
+    </p>
+  </body>
+</html>

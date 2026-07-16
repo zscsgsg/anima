@@ -1,12 +1,24 @@
 package com.anima.agent;
 
 /**
- * Decides whether a tool call may proceed. Called before every tool execution.
- * Headless mode: auto-approves everything. Interactive mode: asks the user.
+ * Decides whether a tool call may proceed.
+ * Returns a three-state decision: ALLOW (run immediately), ASK (prompt user),
+ * or DENY (hard block — model sees "blocked" and can adapt).
+ *
+ * <p>Implementations:
+ * <ul>
+ *   <li>Headless mode: ASK resolves to ALLOW (no interactive user)</li>
+ *   <li>Interactive mode: ASK prompts the user inline</li>
+ * </ul>
  */
 public interface PermissionGate {
     /**
-     * @return true if the tool call is allowed, false to deny
+     * Check permission for a tool call.
+     *
+     * @param toolName  the tool being called
+     * @param arguments raw JSON arguments from the LLM
+     * @param readOnly  whether the tool itself is read-only
+     * @return the decision — ALLOW, ASK, or DENY
      */
-    boolean allow(String toolName, String arguments);
+    PermissionDecision check(String toolName, String arguments, boolean readOnly);
 }

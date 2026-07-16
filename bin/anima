@@ -1,0 +1,26 @@
+#!/bin/bash
+# Anima Launcher for macOS / Linux
+# Add bin/ to PATH to run 'anima' from any directory.
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+JAR_FILE="$ROOT_DIR/lib/anima.jar"
+
+# Check if Java is available
+if ! command -v java &>/dev/null; then
+    echo "[ERROR] Java is not found. Please install JDK 21+"
+    echo "  macOS:  brew install openjdk@21"
+    echo "  Ubuntu: sudo apt install openjdk-21-jdk"
+    echo "  Or download from: https://adoptium.net/"
+    exit 1
+fi
+
+echo "Java: $(java -version 2>&1 | head -1)"
+
+if [ ! -f "$JAR_FILE" ]; then
+    echo "[ERROR] anima.jar not found at: $JAR_FILE"
+    echo "Build first:  cd \"$ROOT_DIR\" && mvn package -DskipTests"
+    exit 1
+fi
+
+exec java -Dfile.encoding=UTF-8 -Dsun.stdout.encoding=UTF-8 -Dsun.stderr.encoding=UTF-8 -jar "$JAR_FILE" "$@"

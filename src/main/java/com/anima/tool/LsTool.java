@@ -10,6 +10,7 @@ import java.util.stream.Collectors;
 public class LsTool implements Tool {
 
     @Override public String name() { return "ls"; }
+        @Override public boolean isReadOnly() { return true; }
     @Override public String description() {
         return "List files and directories in a given path. Use this to explore project structure, see what files exist, and understand the codebase layout.";
     }

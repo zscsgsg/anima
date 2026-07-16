@@ -12,6 +12,7 @@ import java.util.regex.PatternSyntaxException;
 public class GrepTool implements Tool {
 
     @Override public String name() { return "grep"; }
+        @Override public boolean isReadOnly() { return true; }
     @Override public String description() {
         return "Search file contents for a regex pattern. Use this to find where a class, method, string, or pattern appears in the codebase.";
     }
@@ -55,7 +56,8 @@ public class GrepTool implements Tool {
 
         List<String> results = new ArrayList<>();
         Files.walk(baseDir, 10).filter(p -> !Files.isDirectory(p)).forEach(p -> {
-            if (include != null && !p.getFileName().toString().toLowerCase().endsWith(fileExt(include))) return;
+            String fileName = p.getFileName().toString();
+            if (!matchesInclude(fileName, include)) return;
             try {
                 String rel = baseDir.relativize(p).toString().replace("\\", "/");
                 List<String> lines = Files.readAllLines(p);
@@ -77,8 +79,30 @@ public class GrepTool implements Tool {
     }
 
     private static String fileExt(String include) {
-        if (include.startsWith("*.")) return include;
+        if (include == null || include.isEmpty()) return null;
+        // If it looks like a glob path (contains / or **), extract the extension from the last segment
+        if (include.contains("/")) {
+            String last = include.substring(include.lastIndexOf('/') + 1);
+            if (last.startsWith("*.")) return last.substring(1);
+            int dot = last.lastIndexOf('.');
+            if (dot > 0) return last.substring(dot);
+        }
+        if (include.startsWith("*.")) return include.substring(1);  // *.java → .java
         if (include.startsWith(".")) return include;
         return "." + include;
+    }
+
+    /** Check if a filename matches a glob-style include pattern. */
+    private static boolean matchesInclude(String fileName, String include) {
+        if (include == null || include.isEmpty()) return true;
+        String ext = fileExt(include);
+        if (ext != null && fileName.toLowerCase().endsWith(ext.toLowerCase())) return true;
+        // Try glob matching for patterns like **/pom.xml
+        if (include.contains("/")) {
+            String pattern = include.replace("**", ".*").replace("*", "[^/]*").replace("?", ".");
+            return java.util.regex.Pattern.compile(pattern, java.util.regex.Pattern.CASE_INSENSITIVE)
+                .matcher(fileName).matches();
+        }
+        return false;
     }
 }

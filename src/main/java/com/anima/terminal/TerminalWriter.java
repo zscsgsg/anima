@@ -18,10 +18,7 @@ public class TerminalWriter {
     // ── Claude Code output patterns ──
 
     public void banner(String appDesc) {
-        dim("══════════════════════════════════════════════");
-        bold(appDesc);
-        dim("deepseek-v4-flash · 8 tools loaded");
-        dim("══════════════════════════════════════════════");
+        dim("  " + appDesc);
         br();
     }
 
@@ -35,9 +32,43 @@ public class TerminalWriter {
         br();
     }
 
-    /** ⏺ Tool(args) — cyan bold */
+    /** Start of turn — Claude-style "●" indicator, NO newline. */
+    public void turnStart() {
+        terminal.writer().print(new AttributedString("  ●",
+            AttributedStyle.DEFAULT.foreground(AttributedStyle.WHITE + 8)).toAnsi());
+        terminal.writer().flush();
+    }
+
+    /** Phase heading — dim ⎿ prefix for metadata (coordinator phase, etc.). */
+    public void phase(String label) {
+        styled(AttributedStyle.DEFAULT.foreground(AttributedStyle.WHITE + 8), "  ⎿  " + label);
+        br();
+    }
+
+    /** Start of reasoning — gray italic, continues from ●. */
+    public void thinkingHeader() {
+        terminal.writer().print(new AttributedString(" ",
+            AttributedStyle.DEFAULT.foreground(AttributedStyle.WHITE + 8).italic()).toAnsi());
+        terminal.writer().flush();
+    }
+
+    /** Stream a reasoning token — gray italic, no newline. */
+    public void thinkingToken(String token) {
+        terminal.writer().print(new AttributedString(token,
+            AttributedStyle.DEFAULT.foreground(AttributedStyle.WHITE + 8).italic()).toAnsi());
+        terminal.writer().flush();
+    }
+
+    /** End reasoning — newline before response. */
+    public void thinkingEnd() {
+        terminal.writer().println();
+        terminal.writer().flush();
+    }
+
+    /** ⏺ Tool(args) — cyan, with smart arg formatting (Claude Code style). */
     public void toolCall(String name, String args) {
-        styled(AttributedStyle.DEFAULT.foreground(AttributedStyle.CYAN).bold(), "⏺ " + name + "(" + abbreviate(args, 80) + ")");
+        styled(AttributedStyle.DEFAULT.foreground(AttributedStyle.CYAN),
+            "  ⏺ " + name + "(" + abbreviate(args, 100) + ")");
         br();
     }
 

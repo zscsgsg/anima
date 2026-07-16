@@ -35,7 +35,10 @@ public class WriteFileTool implements Tool {
     @Override
     public String execute(String arguments) throws Exception {
         var json = new com.fasterxml.jackson.databind.ObjectMapper().readTree(arguments);
-        String pathStr = json.has("file_path") ? json.get("file_path").asText() : json.get("path").asText();
+        String pathStr = json.has("file_path") ? json.get("file_path").asText() :
+                         json.has("path") ? json.get("path").asText() :
+                         json.has("file") ? json.get("file").asText() : null;
+        if (pathStr == null) return "Error: missing 'file_path', 'path', or 'file' argument";
         String content = json.get("content").asText();
 
         if (content == null || content.isEmpty()) {

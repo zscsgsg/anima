@@ -1,8 +1,11 @@
 package com.anima.web;
 
 import com.anima.agent.AgentLoop;
+import com.anima.agent.PermissionDecision;
 import com.anima.agent.PermissionGate;
 import com.anima.llm.DeepSeekProvider;
+import com.anima.llm.LLMProvider;
+import com.anima.memory.ProjectMemory;
 import com.anima.tool.*;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.javalin.Javalin;
@@ -20,21 +23,31 @@ public class ChatEndpoint {
 
     private static final String SYSTEM_PROMPT = """
         You are Anima, a terminal AI coding agent.
-        You are running on Windows (cmd.exe). Use Windows commands in bash: dir, type, findstr, tasklist.
-        Use ls, glob, grep for cross-platform tasks — they work everywhere without confirmation.
-        Use read_file to inspect file contents — never guess.
-        When the user asks you to do something, use the appropriate tool.
+        You are running on Windows (cmd.exe).
+        Use ls, glob, grep for cross-platform exploration without confirmation.
+        Use read_file to read files — NEVER use bash type/cat for reading.
+        Use write_file to create/overwrite files, edit_file for precise changes.
+        Use bash ONLY for actual commands: build (mvn), git, tests, etc.
+
+        EDITING WORKFLOW (follow this exactly):
+        1. grep to locate the target line/string in the file
+        2. read_file to see the exact text including ALL whitespace and indentation
+        3. edit_file with old_string copied verbatim from read_file output
+        If edit_file fails, go back to step 2 — re-read and copy EXACTLY.
+
         After seeing tool results, synthesize a final answer.
         Respond in the same language as the user.
         """;
 
     private final ToolRegistry toolRegistry;
     private final ObjectMapper json = new ObjectMapper();
+    private final ProjectMemory memory;
 
     /** Holds the pending confirmation future for the current request. */
     private volatile CompletableFuture<Boolean> pendingConfirm;
 
-    public ChatEndpoint(DeepSeekProvider provider) {
+    public ChatEndpoint(DeepSeekProvider provider, ProjectMemory memory) {
+        this.memory = memory;
         this.toolRegistry = new ToolRegistry();
         this.toolRegistry.register(new ReadFileTool());
         this.toolRegistry.register(new BashTool());
@@ -44,6 +57,13 @@ public class ChatEndpoint {
         this.toolRegistry.register(new LsTool());
         this.toolRegistry.register(new GlobTool());
         this.toolRegistry.register(new GrepTool());
+        this.toolRegistry.register(new CodeIndexTool());
+
+        // LSP tools
+        var lspMgr = new com.anima.lsp.LspManager(
+            System.getProperty("user.dir", "."), com.anima.lsp.LspManager.defaultSpecs());
+        for (var lspTool : com.anima.lsp.LspTool.tools(lspMgr))
+            this.toolRegistry.register(lspTool);
     }
 
     public void register(Javalin app) {
@@ -91,33 +111,35 @@ public class ChatEndpoint {
 
         CountDownLatch done = new CountDownLatch(1);
 
-        // Create a PermissionGate that matches Claude Code's model:
-        // - Read-only tools (read_file, glob, grep) → auto-allow
-        // - Bash commands → ask for confirmation
-        // - File writes → ask for confirmation (when added)
-        PermissionGate gate = (toolName, args) -> {
-            // Read-only tools: no confirmation needed (matches Claude Code behavior)
-            if ("read_file".equals(toolName) || "ls".equals(toolName) || "glob".equals(toolName) || "grep".equals(toolName)) {
-                return true;
-            }
-            // Bash, write_file, edit_file: ask user
-            try {
-                writeSseRaw(out, "event: tool_confirm\ndata: " +
-                    json.writeValueAsString(Map.of("name", toolName, "args", args)) + "\n\n");
-            } catch (Exception ignored) {}
+        // Headless permission gate:
+        // - Read-only tools → ALLOW
+        // - Writers → ASK (sends tool_confirm SSE event, waits for user)
+        PermissionGate gate = new PermissionGate() {
+            @Override
+            public PermissionDecision check(String toolName, String args, boolean readOnly) {
+                // Read-only tools: no confirmation needed
+                if (readOnly) return PermissionDecision.ALLOW;
 
-            pendingConfirm = new CompletableFuture<>();
-            try {
-                Boolean allowed = pendingConfirm.get(60, TimeUnit.SECONDS);
-                pendingConfirm = null;
-                return allowed != null && allowed;
-            } catch (Exception e) {
-                pendingConfirm = null;
-                return false;
+                // Writers: ask user via SSE
+                try {
+                    writeSseRaw(out, "event: tool_confirm\ndata: " +
+                        json.writeValueAsString(Map.of("name", toolName, "args", args)) + "\n\n");
+                } catch (Exception ignored) {}
+
+                pendingConfirm = new CompletableFuture<>();
+                try {
+                    Boolean allowed = pendingConfirm.get(60, TimeUnit.SECONDS);
+                    pendingConfirm = null;
+                    return (allowed != null && allowed) ? PermissionDecision.ALLOW : PermissionDecision.DENY;
+                } catch (Exception e) {
+                    pendingConfirm = null;
+                    return PermissionDecision.DENY;
+                }
             }
         };
 
-        var agentLoop = new AgentLoop(new DeepSeekProvider(), toolRegistry, 10, SYSTEM_PROMPT, gate);
+        var agentLoop = new AgentLoop(new DeepSeekProvider(), toolRegistry, 0,
+            buildSystemPrompt(), gate);
 
         new Thread(() -> {
             agentLoop.run(message, new AgentLoop.LoopCallback() {
@@ -133,8 +155,11 @@ public class ChatEndpoint {
                 @Override public void onToolResult(String name, String result) {
                     writeSse(out, "tool_result", jsonToolEvent(name, null, result));
                 }
-                @Override public void onUsage(DeepSeekProvider.Usage u) {
+                @Override public void onUsage(LLMProvider.Usage u) {
                     try { writeSseRaw(out, "event: usage\ndata: " + json.writeValueAsString(Map.of("promptTokens", u.promptTokens(), "completionTokens", u.completionTokens())) + "\n\n"); } catch (Exception ignored) {}
+                }
+                @Override public void onCompaction(String summary, int folded, int kept) {
+                    try { writeSseRaw(out, "event: compaction\ndata: " + json.writeValueAsString(Map.of("folded", folded, "kept", kept)) + "\n\n"); } catch (Exception ignored) {}
                 }
                 @Override public void onComplete(String text) {
                     writeSseRaw(out, "event: done\ndata: {}\n\n");
@@ -171,5 +196,13 @@ public class ChatEndpoint {
 
     private static String escapeSse(String s) {
         return s.replace("\n", "\\n").replace("\r", "\\r");
+    }
+
+    /** Build system prompt with optional project memory prepended. */
+    private String buildSystemPrompt() {
+        if (memory != null && !memory.isEmpty()) {
+            return memory.block() + "\n\n" + SYSTEM_PROMPT;
+        }
+        return SYSTEM_PROMPT;
     }
 }

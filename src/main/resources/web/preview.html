@@ -1,114 +1,87 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-CN">
 <head>
-<meta charset="UTF-8">
-<title>Anima — Claude Code 1:1</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Anima v0.13 — LSP + Code Intelligence</title>
 <style>
-*{margin:0;padding:0}body{background:#1e1e1e;display:flex;justify-content:center;align-items:center;min-height:100vh;font-family:'Cascadia Code','Consolas','Courier New',monospace;font-size:13px;line-height:1.55}
-.win{width:880px;max-width:96vw;border:1px solid #1a1a1a;background:#0d0d0d;overflow:hidden;box-shadow:0 0 50px rgba(0,0,0,.6)}
-.win-body{padding:12px 16px;min-height:460px;max-height:68vh;overflow-y:auto}
-.win-body::-webkit-scrollbar{width:6px}
-.win-body::-webkit-scrollbar-track{background:#0d0d0d}
-.win-body::-webkit-scrollbar-thumb{background:#3a3a3a;border-radius:3px}
-
-.tl{margin:0;color:#d4d4d4;white-space:pre-wrap}
-.tl.dim{color:#6a6a6a}
-.tl.cyan{color:#2aa198}.tl.yl{color:#b58900}.tl.mg{color:#d33682}.tl.bl{color:#268bd2}.tl.gr{color:#859900}.tl.rd{color:#dc322f}.tl.gy{color:#808080}
-.tl.b{font-weight:bold}
-.tl.think{color:#808080;font-style:italic;padding-left:18px}
-
-/* Claude: ⏺ Tool(args) */
-.tc{margin:2px 0;color:#2aa198}.tc:before{content:"⏺ ";color:#2aa198;font-weight:bold}
-/* Claude:   ⎿ result text */  
-.td{color:#aaa;font-size:12px;padding-left:24px;margin:0}.td:before{content:"⎿ ";color:#6a6a6a}
-/* Claude:   ⎿ Done (X tools · X tokens · Xs) */
-.td.done{margin-top:4px}.td.done:before{content:"⎿ "}
-/* Claude error */
-.td.err{color:#dc322f}
-
-/* Permission block — exact Claude format */
-.permb{margin:4px 0}
-.permb .shell{color:#b58900;margin-bottom:2px}
-.permb .shell:before{content:"  "}
-.permb .q{color:#ccc;margin:2px 0}
-.permb .opt{color:#2aa198;font-weight:bold}
-.permb .rest{margin:0;padding-left:22px;color:#888;font-size:12px}
-
-.inp{margin-top:6px;display:flex;align-items:center}.inp .pr{color:#d33682;margin-right:6px}.inp .car{color:#2aa198;animation:blink .7s infinite}
-@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
-
-.st{background:#121212;padding:3px 16px;font-size:10px;color:#6a6a6a;display:flex;gap:14px}.st .stv{color:#2aa198}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{background:#0c0c0c;color:#d4d4d4;font-family:"Cascadia Code","Consolas",monospace;font-size:13px;height:100vh;display:flex;flex-direction:column;overflow:hidden}
+.bar{background:#161616;border-bottom:1px solid #2a2a2a;padding:6px 16px;display:flex;align-items:center;gap:12px;flex-shrink:0;font-size:12px;color:#808080}
+.bar b{color:#9ece6a}.bar .new{color:#e0af68;font-weight:600;font-size:10px;background:#2a2010;padding:1px 8px;border-radius:8px}
+.main{flex:1;display:flex;overflow:hidden}
+.transcript{flex:1;overflow-y:auto;padding:12px 16px;display:flex;flex-direction:column;gap:6px}
+.transcript::-webkit-scrollbar{width:4px}
+.transcript::-webkit-scrollbar-track{background:#0c0c0c}
+.transcript::-webkit-scrollbar-thumb{background:#2a2a2a;border-radius:2px}
+.panel{width:240px;background:#121212;border-left:1px solid #1e1e1e;padding:10px 12px;overflow-y:auto;flex-shrink:0;font-size:11px;display:flex;flex-direction:column;gap:10px}
+.panel h3{color:#9ece6a;font-size:11px;margin-bottom:2px}
+.panel .item{color:#808080;padding:2px 6px;border-radius:3px}
+.panel .item.active{color:#9ece6a;background:#1a2a1a}
+.panel .item.hot{color:#bb9af7}
+.blk{animation:fade .18s ease}
+@keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+.blk.sys{color:#505050;font-size:11px;padding:2px 0}
+.blk.usr{color:#9ece6a;margin-top:4px}.blk.usr::before{content:"▸ ";color:#3a3a3a}
+.blk.asst{color:#d4d4d4;white-space:pre-wrap;word-break:break-word;padding-left:4px;border-left:2px solid #2a2a2a}
+.blk.cmd{color:#bb9af7;font-size:12px;padding:3px 6px;background:#1a1a2e;border-radius:3px}
+.blk.cmd::before{content:"/ ";color:#bb9af7;font-weight:bold}
+.blk.switch{color:#e0af68;font-size:11px;padding:3px 6px;background:#1e1e18;border-radius:3px;border-left:3px solid #e0af68}
+.blk.tool{margin:2px 0}.blk.tool .head{color:#73daca;font-size:10px;font-weight:600;margin-bottom:2px}
+.blk.tool .res{background:#121212;border:1px solid #1e1e1e;border-radius:3px;padding:6px 10px;font-size:11px;color:#b0b0b0;max-height:80px;overflow-y:auto;white-space:pre-wrap}
+.blk.div{color:#1e1e1e;font-size:10px;text-align:center;padding:2px 0}
+.blk.done{color:#73daca;font-size:10px}
+.inp{background:#161616;border-top:1px solid #2a2a2a;padding:8px 16px;display:flex;gap:8px;flex-shrink:0;align-items:center}
+.inp span{color:#9ece6a;font-size:13px}
+.inp input{flex:1;background:transparent;border:none;color:#d4d4d4;font-family:inherit;font-size:13px;padding:6px 0;outline:none}
+.inp input::placeholder{color:#3a3a3a}
+.st{background:#121212;border-top:1px solid #1e1e1e;padding:3px 16px;font-size:10px;color:#505050;display:flex;gap:14px;flex-shrink:0}
+.st span{color:#9ece6a}
 </style>
 </head>
 <body>
-<div class="win">
-<div class="win-body">
-
-<!-- ====== TURN 1: search ====== -->
-<div class="tl bl b">> 找一下所有 import DeepSeekProvider 的地方</div>
-
-<div class="tl think">thinking…</div>
-
-<div class="tc">Glob(**/*.java)</div>
-<div class="td">8 file(s) matching</div>
-
-<div class="tc">Grep(import.*DeepSeekProvider)</div>
-<div class="td">3 matches found</div>
-
-<div class="tl">找到了 3 处：</div>
-<div class="tl" style="padding-left:18px;font-size:12px;color:#aaa">AgentLoop.java — 第 3 行</div>
-<div class="tl" style="padding-left:18px;font-size:12px;color:#aaa">AnimaApp.java — 第 3 行</div>
-<div class="tl" style="padding-left:18px;font-size:12px;color:#aaa">ChatEndpoint.java — 第 5 行</div>
-
-<div class="td done">Done (2 tool uses · 1.2k tokens · 4.8s)</div>
-
-<!-- ====== TURN 2: edit version ====== -->
-<div class="tl bl b" style="margin-top:12px">> 帮我把 pom.xml 的版本改成 0.5.0</div>
-
-<div class="tl think">thinking…</div>
-
-<div class="tc">Read(pom.xml)</div>
-<div class="td">&lt;version&gt;0.1.0&lt;/version&gt;</div>
-
-<!-- Permission — Claude exact format -->
-<div class="permb">
-  <div class="shell">Edit pom.xml</div>
-  <div class="q">Do you want to proceed?</div>
-  <div class="rest"><span class="opt">> 1. Yes</span></div>
-  <div class="rest">  2. Yes, and don't ask again for Edit in this session</div>
-  <div class="rest">  3. No</div>
-</div>
-<div class="tl gy" style="padding-left:4px">1</div>
-
-<div class="tc">Edit(pom.xml)</div>
-<div class="td">Replaced &lt;version&gt;0.1.0 → 0.5.0</div>
-
-<!-- Permission — bash -->
-<div class="permb">
-  <div class="shell">Bash mvn compile -q</div>
-  <div class="q">Do you want to proceed?</div>
-  <div class="rest"><span class="opt">> 1. Yes</span></div>
-  <div class="rest">  2. Yes, and don't ask again for mvn compile -q in this project</div>
-  <div class="rest">  3. No</div>
-</div>
-<div class="tl gy" style="padding-left:4px">1</div>
-
-<div class="tc">Bash(mvn compile -q)</div>
-<div class="td">BUILD SUCCESS</div>
-
-<div class="tl">已完成。pom.xml 版本已改为 0.5.0，编译通过。</div>
-<div class="td done">Done (3 tool uses · 800 tokens · 6.2s)</div>
-
-<!-- ====== INPUT ====== -->
-<div class="inp"><span class="pr">> </span><span class="car">▌</span></div>
-
-</div>
-<div class="st">
-  <span class="stv">default</span> mode
-  · <span class="stv">deepseek-v4-flash</span>
-  · <span class="stv">7</span> tools
-  · 2.0k tokens used
-</div>
-</div>
+<div class="bar"><b>⬡ anima</b> v0.13.0 <span class="new">NEW: LSP</span> <span>·</span> <span id="modelDisplay">flash/deepseek-v4-flash</span> <span>·</span> <span class="live" id="live">⬤ idle</span></div>
+<div class="main">
+<div class="transcript" id="msgs"></div>
+<div class="panel">
+<div><h3>🧠 Models</h3>
+<div class="item active" id="mFlash">⬤ flash — v4-flash</div>
+<div class="item" id="mPro">  pro — v4-pro</div>
+<div class="item" style="color:#505050">+ add via config</div></div>
+<div style="border-top:1px solid #1e1e1e;padding-top:10px">
+<h3>🔍 Code Index</h3>
+<div class="item hot">code_index — outline</div>
+<div class="item hot">code_index — search</div>
+<div class="item" style="color:#586e75">14 languages</div></div>
+<div style="border-top:1px solid #1e1e1e;padding-top:10px">
+<h3>🔬 LSP (NEW)</h3>
+<div class="item hot">lsp_definition</div>
+<div class="item hot">lsp_references</div>
+<div class="item hot">lsp_hover</div>
+<div class="item hot">lsp_diagnostics</div>
+<div style="border-top:1px solid #1e1e1e;padding-top:10px">
+<h3>⚡ Hot-Switch</h3>
+<div class="item hot">/model — list</div>
+<div class="item hot">/model pro — switch</div></div></div></div>
+<div class="inp"><span>▸</span><input id="inp" placeholder="试试 /model pro" autofocus autocomplete="off" /></div>
+<div class="st">model: <span id="stModel">flash/deepseek-v4-flash</span> · tools: <span>17</span> · tokens: <span id="stTokens">0</span></div>
+<script>
+const msgs=document.getElementById("msgs"),inp=document.getElementById("inp"),
+      live=document.getElementById("live"),stTokens=document.getElementById("stTokens"),
+      stModel=document.getElementById("stModel"),modelDisplay=document.getElementById("modelDisplay"),
+      mFlash=document.getElementById("mFlash"),mPro=document.getElementById("mPro");
+let cm="flash";
+function add(cls,text){const d=document.createElement("div");d.className="blk "+cls;d.textContent=text;msgs.appendChild(d);msgs.scrollTop=msgs.scrollHeight;return d}
+function sw(name,api){cm=name;stModel.textContent=name+"/"+api;modelDisplay.textContent=name+"/"+api;mFlash.classList.toggle("active",name==="flash");mPro.classList.toggle("active",name==="pro")}
+setTimeout(()=>{add("sys","⬡ Anima v0.13.0 — LSP + Code Intelligence");add("sys","══════════════════════════════");add("sys","NEW: lsp_definition/references/hover/diagnostics");add("sys","Tool count: 17");add("sys","══════════════════════════════")},200);
+setTimeout(()=>{add("cmd","model");add("sys","Current: flash (deepseek-v4-flash)");add("sys","Available: flash, pro");add("sys","Usage: /model <name>")},600);
+setTimeout(()=>{add("usr","code_index action=search query=Loop")},2000);
+setTimeout(()=>{add("tool","");const el=msgs.lastChild;el.innerHTML="<div class=head>⚙ code_index</div><div class=res>AgentLoop.java:15: class AgentLoop\nAgentLoop.java:205: method runInternal\nTerminalUI.java:63: method run</div>"},2200);
+setTimeout(()=>{add("div","──────────────");add("cmd","model pro");add("switch","🔄 Switched to pro (deepseek-v4-pro)");sw("pro","deepseek-v4-pro")},2800);
+setTimeout(()=>{add("usr","分析 AgentLoop 的并发安全性")},3600);
+setTimeout(()=>{add("asst","[pro] 仔细审查中...\n\nAgentLoop 的 history 操作都在单线程执行。\n潜在风险：forceCompact() 与 run() 可能并发。\n建议：provider 声明为 volatile 防止可见性问题。\n\npro 模型的推理深度明显高于 flash。");live.innerHTML="⬤ idle";stTokens.textContent="2.8k"},4600);
+setTimeout(()=>{add("div","──────────────");add("cmd","model flash");add("switch","🔄 Switched to flash");sw("flash","deepseek-v4-flash")},5800);
+inp.addEventListener("keydown",(e)=>{if(e.key==="Enter"){const t=inp.value.trim();if(!t)return;inp.value="";if(t==="/model"){add("cmd","model");add("sys","Current: "+cm);add("sys","Available: flash, pro")}else if(t==="/model pro"){add("cmd","model pro");add("switch","🔄 Switched to pro");sw("pro","deepseek-v4-pro")}else if(t==="/model flash"){add("cmd","model flash");add("switch","🔄 Switched to flash");sw("flash","deepseek-v4-flash")}else if(t.startsWith("/")){add("cmd",t.slice(1));add("sys","OK")}else{add("usr",t);live.innerHTML="⬤ thinking";setTimeout(()=>{add("asst","收到！(model:"+cm+")");live.innerHTML="⬤ idle"},600)}}});
+</script>
 </body>
 </html>

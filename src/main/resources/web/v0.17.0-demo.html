@@ -1,0 +1,605 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Anima v0.17.0 — 记忆系统深度对齐 + 新工具</title>
+    <style>
+      :root {
+        --bg: #0d1117;
+        --card: #161b22;
+        --border: #30363d;
+        --text: #c9d1d9;
+        --muted: #8b949e;
+        --accent: #58a6ff;
+        --green: #3fb950;
+        --purple: #bc8cff;
+        --orange: #d2991d;
+        --red: #f85149;
+        --cyan: #39d2c0;
+      }
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        background: var(--bg);
+        color: var(--text);
+        font:
+          14px/1.6 -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+        max-width: 1000px;
+        margin: 0 auto;
+        padding: 24px;
+      }
+      h1 {
+        font-size: 26px;
+        margin-bottom: 4px;
+      }
+      h1 .ver {
+        color: var(--accent);
+      }
+      h2 {
+        font-size: 18px;
+        margin: 28px 0 12px;
+        padding-bottom: 6px;
+        border-bottom: 1px solid var(--border);
+      }
+      h2 .dot {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        margin-right: 6px;
+        vertical-align: middle;
+      }
+      .dot.g {
+        background: var(--green);
+      }
+      .dot.p {
+        background: var(--purple);
+      }
+      .dot.o {
+        background: var(--orange);
+      }
+      .dot.c {
+        background: var(--cyan);
+      }
+      .dot.r {
+        background: var(--red);
+      }
+      .subtitle {
+        color: var(--muted);
+        margin-bottom: 16px;
+      }
+      .pill-row {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+        margin-bottom: 20px;
+      }
+      .pill {
+        font-size: 11px;
+        padding: 2px 8px;
+        border-radius: 10px;
+        background: var(--card);
+        border: 1px solid var(--border);
+        color: var(--muted);
+      }
+      .pill.new {
+        border-color: var(--green);
+        color: var(--green);
+      }
+      .term {
+        background: #0a0e14;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        margin-bottom: 16px;
+        overflow: hidden;
+        font-family: "Cascadia Code", "Fira Code", monospace;
+        font-size: 12.5px;
+        line-height: 1.7;
+      }
+      .term-header {
+        background: #1a1f2b;
+        padding: 4px 12px;
+        font-size: 11px;
+        color: var(--muted);
+        display: flex;
+        justify-content: space-between;
+      }
+      .term-header .phase {
+        color: var(--accent);
+      }
+      .term-body {
+        padding: 12px 16px;
+        white-space: pre-wrap;
+        word-break: break-all;
+      }
+      .think {
+        color: var(--muted);
+      }
+      .plan {
+        color: var(--purple);
+      }
+      .exec {
+        color: var(--accent);
+      }
+      .cmd {
+        color: var(--green);
+      }
+      .err {
+        color: var(--red);
+      }
+      .dim {
+        color: var(--muted);
+      }
+      .out {
+        color: var(--text);
+      }
+      .hl {
+        color: var(--orange);
+        font-weight: bold;
+      }
+      .code {
+        background: #1a1f2b;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 10px 14px;
+        margin: 8px 0;
+        font-family: "Cascadia Code", "Fira Code", monospace;
+        font-size: 12px;
+        white-space: pre;
+        overflow-x: auto;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 8px 0;
+      }
+      th,
+      td {
+        padding: 6px 10px;
+        text-align: left;
+        border-bottom: 1px solid var(--border);
+        font-size: 13px;
+      }
+      th {
+        color: var(--muted);
+        font-weight: normal;
+      }
+      td.file {
+        color: var(--accent);
+      }
+      td.lines {
+        color: var(--green);
+      }
+      .flow {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 12px 0;
+        font-size: 12px;
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+      .flow-box {
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 8px 14px;
+        background: var(--card);
+        text-align: center;
+        min-width: 100px;
+      }
+      .flow-box .label {
+        font-size: 10px;
+        color: var(--muted);
+      }
+      .flow-box .name {
+        font-size: 13px;
+        font-weight: bold;
+      }
+      .flow-arrow {
+        color: var(--muted);
+        font-size: 16px;
+      }
+      .mermaid {
+        background: #0a0e14;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 20px;
+        margin: 12px 0;
+        font-family: "Cascadia Code", monospace;
+        font-size: 11px;
+        line-height: 1.5;
+        white-space: pre;
+        color: var(--accent);
+      }
+    </style>
+  </head>
+  <body>
+    <h1>⬡ Anima <span class="ver">v0.17.0</span></h1>
+    <p class="subtitle">
+      记忆系统深度对齐 Reasonix + 4 个新工具 — 1:1 补齐全部记忆能力缺口
+    </p>
+
+    <div class="pill-row">
+      <span class="pill new">🔍 memory 搜索工具</span>
+      <span class="pill new">🌐 GlobalDir 跨项目共享</span>
+      <span class="pill new">📦 Archive 归档机制</span>
+      <span class="pill new">🔗 祖先链 + AGENTS.md</span>
+      <span class="pill new">👤 用户全局记忆</span>
+      <span class="pill new">✂️ delete_range</span>
+      <span class="pill new">📋 workspace</span>
+      <span class="pill new">🖥️ preview</span>
+      <span class="pill"
+        >📦 已有: 28 工具 + Coordinator + Checkpoint + Skills + MCP</span
+      >
+    </div>
+
+    <!-- ==================== 1. Memory Search ==================== -->
+    <h2><span class="dot c"></span>记忆搜索工具 (memory) — BM25 语义检索</h2>
+    <p style="color: var(--muted); margin-bottom: 12px">
+      对标 Reasonix recall.go — 模型可以 <b>search</b>/<b>read</b>/<b>list</b>
+      已保存的记忆。<br />
+      搜索使用轻量 BM25 算法（CJK 分词支持），无需外部依赖。
+    </p>
+
+    <div class="term">
+      <div class="term-header"><span>模型调用 — memory 工具</span></div>
+      <div class="term-body">
+        <span class="exec"
+          >模型调用 memory({ operation: "search", query: "BCrypt password
+          security" })</span
+        >
+
+        <span class="out"
+          >Memory search results for "BCrypt password security": 1. score=15.432
+          name=password-storage-strategy type=project snippet: 密码存储必须使用
+          BCrypt 加盐哈希，BCryptPasswordEncoder 配置... 2. score=9.210
+          name=security-review-checklist type=feedback snippet: Why:
+          上次安全审计发现3个Controller缺少CSRF保护。How to apply: ... Use
+          operation="read" with a memory name to inspect the full saved
+          fact.</span
+        >
+
+        <span class="exec"
+          >模型调用 memory({ operation: "read", name:
+          "password-storage-strategy" })</span
+        >
+
+        <span class="out"
+          >Memory password-storage-strategy title: 密码存储策略 type: project
+          description:
+          所有用户密码必须使用BCrypt加盐哈希，配置在SecurityConfig中 path:
+          d:\project\.anima\memory\password-storage-strategy.md **Why:**
+          明文存储是最高危漏洞，BCrypt 是业界标准 **How to apply:** 1. pom.xml
+          添加 spring-security-crypto 2. SecurityConfig 配置
+          BCryptPasswordEncoder 3. 注册/登录时使用 encode/matches</span
+        >
+
+        <span class="exec"
+          >模型调用 memory({ operation: "list", type: "feedback" })</span
+        >
+
+        <span class="out"
+          >Saved memories (type=feedback): -
+          [安全审查清单](security-review-checklist.md) [feedback] —
+          每次Controller变更需做安全检查 -
+          [终端UI偏好](terminal-ui-preference.md) [feedback] — Claude Code 1:1
+          对标要求</span
+        >
+      </div>
+    </div>
+
+    <!-- ==================== 2. GlobalDir + Archive ==================== -->
+    <h2><span class="dot g"></span>GlobalDir 跨项目共享 + Archive 归档</h2>
+    <p style="color: var(--muted); margin-bottom: 12px">
+      对标 Reasonix store.go — <b>user/feedback</b> 类型记忆自动路由到
+      <code>~/.anima/memory/global/</code>，跨项目共享。<br />
+      <b>Archive</b>：forget 时不再直接删除，而是移到
+      <code>.archive/</code> 目录带时间戳，可追溯恢复。
+    </p>
+
+    <div class="mermaid">
+      记忆路由规则: ┌─────────────────────────────────────┐ │ remember({ type:
+      "user" }) │ │ remember({ type: "feedback" }) │────→
+      ~/.anima/memory/global/ (所有项目共享)
+      └─────────────────────────────────────┘
+      ┌─────────────────────────────────────┐ │ remember({ type: "project" }) │
+      │ remember({ type: "reference" }) │────→ .anima/memory/ (项目本地)
+      └─────────────────────────────────────┘ 归档机制:
+      forget("password-storage-strategy") →
+      .anima/memory/.archive/2026-06-29-09-30-00-password-storage-strategy.md
+      (文件保留、MEMORY.md 索引清理、可手动恢复)
+    </div>
+
+    <!-- ==================== 3. Ancestor Chain + AGENTS.md ==================== -->
+    <h2>
+      <span class="dot p"></span>祖先链发现 + AGENTS.md/CLAUDE.md 兼容 +
+      用户全局记忆
+    </h2>
+    <p style="color: var(--muted); margin-bottom: 12px">
+      对标 Reasonix doc.go — 从 cwd 向上遍历到 .git 根目录，加载所有
+      <b>ANIMA.md / AGENTS.md / CLAUDE.md / REASONIX.md</b>。<br />
+      支持 <b>~/.anima/ANIMA.md</b> 用户全局记忆 +
+      <b>~/.anima/AGENTS.md</b> 跨工具兼容。
+    </p>
+
+    <div class="mermaid">
+      记忆加载层级 (低→高优先级): 1. ~/.anima/ANIMA.md [user]
+      用户全局，跨项目共享 2. ~/.anima/AGENTS.md [user] AGENTS.md 兼容 3.
+      /monorepo/ANIMA.md [ancestor] 仓库根 .git 所在目录 4.
+      /monorepo/subproject/ANIMA.md [project] 项目根 (cwd) 5. ./ANIMA.local.md
+      [local] 个人覆盖 (git-ignored) 6. ./AGENTS.local.md [local] Claude
+      兼容覆盖 @import 递归: 最多 5 层，支持 ~ 展开，带循环检测 兼容格式:
+      ANIMA.md, AGENTS.md, CLAUDE.md, REASONIX.md (全部自动识别)
+    </div>
+
+    <!-- ==================== 4. New Tools ==================== -->
+    <h2>
+      <span class="dot o"></span>新增工具集 (delete_range / workspace / preview)
+    </h2>
+
+    <div class="term">
+      <div class="term-header"><span>delete_range — 按行号范围删除</span></div>
+      <div class="term-body">
+        <span class="exec"
+          >模型调用 delete_range({ path: "src/main/java/OldCode.java",
+          start_line: 42, end_line: 67 })</span
+        >
+        <span class="cmd">
+          ⎿ Deleted 26 line(s) (L42-L67) from src/main/java/OldCode.java. 200 →
+          174 lines.</span
+        >
+      </div>
+    </div>
+
+    <div class="term">
+      <div class="term-header"><span>workspace — 工作区信息</span></div>
+      <div class="term-body">
+        <span class="exec">模型调用 workspace({})</span>
+        <span class="out"
+          >Workspace: D:\1111\code\Anima OS: Windows 11 10.0 Java: 21.0.1 Git:
+          detected Branch: main Top-level: .anima/ [dir] .idea/ [dir] .vscode/
+          [dir] src/ [dir] target/ [dir] pom.xml ANIMA.md anima.bat</span
+        >
+      </div>
+    </div>
+
+    <div class="term">
+      <div class="term-header"><span>preview — 预览 URL</span></div>
+      <div class="term-body">
+        <span class="exec"
+          >模型调用 preview({ url: "http://localhost:8080" })</span
+        >
+        <span class="cmd">
+          ⎿ Preview opened: http://localhost:8080 Server responded with status
+          200. The user can now see it in their browser.</span
+        >
+
+        <span class="exec"
+          >模型调用 preview({ url: "src/main/resources/web/v0.17.0-demo.html"
+          })</span
+        >
+        <span class="cmd">
+          ⎿ Preview:
+          file:///D:/1111/code/Anima/src/main/resources/web/v0.17.0-demo.html
+          Open this file in your browser to see the result.</span
+        >
+      </div>
+    </div>
+
+    <!-- ==================== 对比 ==================== -->
+    <h2>记忆系统 — Reasonix vs Anima v0.17.0</h2>
+    <table>
+      <tr>
+        <th>能力</th>
+        <th>Reasonix</th>
+        <th>Anima v0.16</th>
+        <th>Anima v0.17</th>
+      </tr>
+      <tr>
+        <td>项目记忆文件</td>
+        <td>✅ REASONIX.md</td>
+        <td>⚠️ 仅 ANIMA.md</td>
+        <td>
+          <span style="color: var(--green)">✅ AGENTS/CLAUDE/REASONIX</span>
+        </td>
+      </tr>
+      <tr>
+        <td>祖先链发现</td>
+        <td>✅ .git root 向上</td>
+        <td>❌</td>
+        <td><span style="color: var(--green)">✅ .git root 向上</span></td>
+      </tr>
+      <tr>
+        <td>用户全局记忆</td>
+        <td>✅ ~/.config/reasonix/</td>
+        <td>❌</td>
+        <td><span style="color: var(--green)">✅ ~/.anima/</span></td>
+      </tr>
+      <tr>
+        <td>@import 递归</td>
+        <td>✅ 5层+循环检测+~展开</td>
+        <td>⚠️ 1层</td>
+        <td><span style="color: var(--green)">✅ 5层+循环检测+~展开</span></td>
+      </tr>
+      <tr>
+        <td>remember 工具</td>
+        <td>✅ 4类型</td>
+        <td>✅ 4类型</td>
+        <td><span style="color: var(--green)">✅ + GlobalDir 路由</span></td>
+      </tr>
+      <tr>
+        <td>forget 工具</td>
+        <td>✅ archive 归档</td>
+        <td>⚠️ 直接删除</td>
+        <td><span style="color: var(--green)">✅ archive 归档</span></td>
+      </tr>
+      <tr>
+        <td>memory 搜索工具</td>
+        <td>✅ BM25 search/read/list</td>
+        <td>❌</td>
+        <td>
+          <span style="color: var(--green)">✅ BM25 search/read/list</span>
+        </td>
+      </tr>
+      <tr>
+        <td>GlobalDir 共享</td>
+        <td>✅ user/feedback 全局</td>
+        <td>❌</td>
+        <td>
+          <span style="color: var(--green)">✅ user/feedback → global/</span>
+        </td>
+      </tr>
+      <tr>
+        <td>Archive 归档</td>
+        <td>✅ .archive/ 时间戳</td>
+        <td>❌</td>
+        <td><span style="color: var(--green)">✅ .archive/ 时间戳</span></td>
+      </tr>
+      <tr style="border-top: 2px solid var(--border)">
+        <td><b>记忆覆盖率</b></td>
+        <td>100%</td>
+        <td>~30%</td>
+        <td>
+          <span style="color: var(--green)"><b>~90%</b></span>
+        </td>
+      </tr>
+    </table>
+
+    <!-- ==================== 文件清单 ==================== -->
+    <h2>v0.17.0 交付文件清单</h2>
+    <table>
+      <tr>
+        <th>文件</th>
+        <th>变更</th>
+        <th>行数</th>
+      </tr>
+      <tr>
+        <td class="file">tool/MemoryRecallTool.java</td>
+        <td>新增</td>
+        <td class="lines">308</td>
+      </tr>
+      <tr>
+        <td class="file">tool/RememberTool.java</td>
+        <td>修改</td>
+        <td class="lines">+60</td>
+      </tr>
+      <tr>
+        <td class="file">tool/ForgetTool.java</td>
+        <td>修改</td>
+        <td class="lines">+43</td>
+      </tr>
+      <tr>
+        <td class="file">memory/ProjectMemory.java</td>
+        <td>重写</td>
+        <td class="lines">+121</td>
+      </tr>
+      <tr>
+        <td class="file">tool/DeleteRangeTool.java</td>
+        <td>新增</td>
+        <td class="lines">106</td>
+      </tr>
+      <tr>
+        <td class="file">tool/WorkspaceTool.java</td>
+        <td>新增</td>
+        <td class="lines">77</td>
+      </tr>
+      <tr>
+        <td class="file">tool/PreviewTool.java</td>
+        <td>新增</td>
+        <td class="lines">91</td>
+      </tr>
+      <tr>
+        <td class="file">terminal/TerminalUI.java</td>
+        <td>修改</td>
+        <td class="lines">+9</td>
+      </tr>
+      <tr>
+        <td class="file">ANIMA.md</td>
+        <td>修改</td>
+        <td class="lines">+7</td>
+      </tr>
+      <tr style="border-top: 2px solid var(--border)">
+        <td class="file"><b>合计 9 文件</b></td>
+        <td><b>4 新增 + 5 修改</b></td>
+        <td class="lines"><b>~822 行</b></td>
+      </tr>
+    </table>
+
+    <!-- ==================== 简历卖点 ==================== -->
+    <h2>🏆 简历核心卖点（社招 AI Agent 方向）</h2>
+
+    <table>
+      <tr>
+        <th>维度</th>
+        <th>亮点</th>
+      </tr>
+      <tr>
+        <td><b>架构设计</b></td>
+        <td>
+          Planner+Executor 双模型 Coordinator，独立缓存会话；Agent Loop
+          完全自研（LangChain4j实现，非框架AiServices）
+        </td>
+      </tr>
+      <tr>
+        <td><b>记忆系统</b></td>
+        <td>
+          对标 Reasonix 的四层分层记忆：祖先链文档 + 用户全局 + auto-memory
+          store（frontmatter + BM25搜索）+ GlobalDir 跨项目共享 + Archive 归档
+        </td>
+      </tr>
+      <tr>
+        <td><b>工具生态</b></td>
+        <td>
+          28 个内置工具 + MCP 无限扩展 + Skills 系统；ReadOnly
+          权限分级；证据驱动的 complete_step 签收
+        </td>
+      </tr>
+      <tr>
+        <td><b>安全性</b></td>
+        <td>
+          三态权限（ALLOW/ASK/DENY）+ glob规则 + 检查点快照回退 + SSRF防护 +
+          工作区路径逃逸防护
+        </td>
+      </tr>
+      <tr>
+        <td><b>工程化</b></td>
+        <td>
+          DeepSeek 前缀缓存优化（byte-stable prompt）、三级自动上下文压缩、Storm
+          Breaker 死循环检测、Grace Round
+        </td>
+      </tr>
+      <tr>
+        <td><b>终端体验</b></td>
+        <td>JLine3 终端 UI 1:1 对标 Claude Code 交互体验</td>
+      </tr>
+      <tr>
+        <td><b>技术栈</b></td>
+        <td>
+          Java 21 + LangChain4j 1.16.3 + DeepSeek V4 + JLine 3.26.1 + Javalin
+          6.6.0
+        </td>
+      </tr>
+    </table>
+
+    <p
+      style="
+        color: var(--muted);
+        font-size: 11px;
+        margin-top: 32px;
+        text-align: center;
+      "
+    >
+      Anima v0.17.0 — Reasonix 记忆系统 90% 覆盖率 · 28 工具 · 68 源文件 BUILD
+      SUCCESS<br />
+      社招简历关键词: AI Agent 工程化 · 记忆系统 · 工具调用编排 · 双模型协作 ·
+      LangChain4j · DeepSeek
+    </p>
+  </body>
+</html>

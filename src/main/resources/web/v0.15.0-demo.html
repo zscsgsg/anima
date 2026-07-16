@@ -1,0 +1,715 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Anima v0.15.0 — 智能体增幅 功能演示</title>
+    <style>
+      :root {
+        --bg: #0d1117;
+        --card: #161b22;
+        --border: #30363d;
+        --text: #c9d1d9;
+        --muted: #8b949e;
+        --accent: #58a6ff;
+        --green: #3fb950;
+        --purple: #bc8cff;
+        --orange: #d2991d;
+        --red: #f85149;
+      }
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        background: var(--bg);
+        color: var(--text);
+        font:
+          14px/1.6 -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+        max-width: 960px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+      h1 {
+        font-size: 24px;
+        margin-bottom: 4px;
+      }
+      h1 span {
+        color: var(--accent);
+      }
+      .subtitle {
+        color: var(--muted);
+        margin-bottom: 24px;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 16px;
+        margin-bottom: 32px;
+      }
+      .card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 20px;
+      }
+      .card h3 {
+        margin-bottom: 8px;
+        font-size: 16px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .card h3 .icon {
+        font-size: 22px;
+      }
+      .card p {
+        color: var(--muted);
+        font-size: 13px;
+        margin-bottom: 8px;
+      }
+      .badge {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-size: 11px;
+        font-weight: 600;
+      }
+      .badge-new {
+        background: var(--accent);
+        color: #fff;
+      }
+      .tool-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+        margin-top: 8px;
+      }
+      .tool-tag {
+        font-size: 11px;
+        padding: 2px 6px;
+        border-radius: 4px;
+        background: var(--border);
+        color: var(--muted);
+        font-family: monospace;
+      }
+      .section-title {
+        font-size: 18px;
+        margin: 24px 0 12px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid var(--border);
+      }
+      .code-block {
+        background: #0d1117;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 14px;
+        font-family: "Cascadia Code", Consolas, monospace;
+        font-size: 13px;
+        overflow-x: auto;
+        margin: 8px 0;
+      }
+      .code-block .kw {
+        color: var(--red);
+      }
+      .code-block .str {
+        color: var(--green);
+      }
+      .code-block .cmt {
+        color: var(--muted);
+      }
+      .code-block .fn {
+        color: var(--purple);
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 12px 0;
+      }
+      th,
+      td {
+        text-align: left;
+        padding: 8px 12px;
+        border-bottom: 1px solid var(--border);
+        font-size: 13px;
+      }
+      th {
+        color: var(--muted);
+        font-weight: 600;
+      }
+      tr:hover {
+        background: rgba(88, 166, 255, 0.04);
+      }
+      .tabs {
+        display: flex;
+        gap: 4px;
+        margin-bottom: 16px;
+        flex-wrap: wrap;
+      }
+      .tab {
+        padding: 6px 14px;
+        border-radius: 6px 6px 0 0;
+        cursor: pointer;
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-bottom: none;
+        color: var(--muted);
+        font-size: 13px;
+      }
+      .tab.active {
+        background: var(--accent);
+        color: #fff;
+        border-color: var(--accent);
+      }
+      .panel {
+        display: none;
+      }
+      .panel.active {
+        display: block;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>⬡ Anima <span>v0.15.0</span></h1>
+    <p class="subtitle">
+      智能体增幅 — Skills · MCP · Ask · Remember · Output Style
+    </p>
+
+    <div class="grid">
+      <div class="card">
+        <h3>
+          <span class="icon">🧬</span> Skills 系统
+          <span class="badge badge-new">NEW</span>
+        </h3>
+        <p>
+          SKILL.md 按需知识注入。inline 模式折叠进父 turn，subagent
+          模式独立子循环。四层优先级：project > custom > global > builtin。
+        </p>
+        <div class="tool-list">
+          <span class="tool-tag">run_skill</span
+          ><span class="tool-tag">read_skill</span
+          ><span class="tool-tag">install_skill</span>
+        </div>
+      </div>
+      <div class="card">
+        <h3>
+          <span class="icon">🔌</span> MCP 插件系统
+          <span class="badge badge-new">NEW</span>
+        </h3>
+        <p>
+          外部工具 stdio JSON-RPC 接入。Claude Code 兼容 .mcp.json
+          配置。命名空间隔离 mcp__server__tool。
+        </p>
+        <div class="tool-list">
+          <span class="tool-tag">/mcp</span
+          ><span class="tool-tag">.mcp.json</span
+          ><span class="tool-tag">McpHost</span>
+        </div>
+      </div>
+      <div class="card">
+        <h3>
+          <span class="icon">❓</span> Ask 工具
+          <span class="badge badge-new">NEW</span>
+        </h3>
+        <p>
+          结构化多选题交互。1-4 题可选，支持多选。headless 运行时自动提供
+          fallback 决策建议。
+        </p>
+        <div class="tool-list">
+          <span class="tool-tag">ask</span
+          ><span class="tool-tag">AskQuestion</span
+          ><span class="tool-tag">AskAnswer</span>
+        </div>
+      </div>
+      <div class="card">
+        <h3>
+          <span class="icon">🧠</span> Remember / Forget
+          <span class="badge badge-new">NEW</span>
+        </h3>
+        <p>
+          跨会话持久记忆。user/feedback/project/reference 四类。MEMORY.md
+          索引自动维护。
+        </p>
+        <div class="tool-list">
+          <span class="tool-tag">remember</span
+          ><span class="tool-tag">forget</span
+          ><span class="tool-tag">.anima/memory/</span>
+        </div>
+      </div>
+      <div class="card">
+        <h3>
+          <span class="icon">🎭</span> Output Style
+          <span class="badge badge-new">NEW</span>
+        </h3>
+        <p>
+          可选输出风格：default（标准）、explanatory（解释性）、learning（协作模式）、concise（精简模式）。
+        </p>
+        <div class="tool-list">
+          <span class="tool-tag">/style</span
+          ><span class="tool-tag">OutputStyle</span>
+        </div>
+      </div>
+      <div class="card">
+        <h3>
+          <span class="icon">🔧</span> 内置技能
+          <span class="badge badge-new">NEW</span>
+        </h3>
+        <p>
+          4 个 subagent
+          技能：explore（代码探索）、research（代码+网页研究）、review（代码审查）、security_review（安全审查）。
+        </p>
+        <div class="tool-list">
+          <span class="tool-tag">explore</span
+          ><span class="tool-tag">research</span
+          ><span class="tool-tag">review</span
+          ><span class="tool-tag">security_review</span>
+        </div>
+      </div>
+    </div>
+
+    <h2 class="section-title">v0.15.1 增量 — 技能下载 + MCP HTTP 传输</h2>
+
+    <div class="grid">
+      <div class="card">
+        <h3>
+          <span class="icon">📥</span> install_source
+          <span class="badge badge-new">NEW</span>
+        </h3>
+        <p>
+          从 URL/GitHub/本地/.mcp.json 下载安装技能。两阶段：apply=false
+          返回计划，apply=true 执行。支持 op=uninstall 卸载。
+        </p>
+        <div class="tool-list">
+          <span class="tool-tag">install_source</span
+          ><span class="tool-tag">GitHub raw</span
+          ><span class="tool-tag">planId</span>
+        </div>
+      </div>
+      <div class="card">
+        <h3>
+          <span class="icon">🌐</span> MCP HTTP 传输
+          <span class="badge badge-new">NEW</span>
+        </h3>
+        <p>
+          Streamable HTTP: type="http"/"sse"。JSON-RPC 2.0 over
+          POST，Mcp-Session-Id 管理。prompts/list 自动映射为 slash 命令。
+        </p>
+        <div class="tool-list">
+          <span class="tool-tag">HttpMcpConnection</span
+          ><span class="tool-tag">SSE</span
+          ><span class="tool-tag">McpPrompt</span>
+        </div>
+      </div>
+    </div>
+
+    <h2 class="section-title">完整工具清单（22个内置 + Skills + MCP 外部）</h2>
+
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab('all')">全部</div>
+      <div class="tab" onclick="switchTab('read')">只读</div>
+      <div class="tab" onclick="switchTab('write')">写入</div>
+      <div class="tab" onclick="switchTab('v015')">v0.15 新增</div>
+    </div>
+
+    <div id="all" class="panel active">
+      <table>
+        <tr>
+          <th>工具</th>
+          <th>类型</th>
+          <th>说明</th>
+        </tr>
+        <tr>
+          <td>read_file</td>
+          <td>只读</td>
+          <td>带行号读取文件，支持 offset/limit 分页</td>
+        </tr>
+        <tr>
+          <td>ls</td>
+          <td>只读</td>
+          <td>列出目录内容，跨平台</td>
+        </tr>
+        <tr>
+          <td>glob</td>
+          <td>只读</td>
+          <td>文件模式匹配搜索</td>
+        </tr>
+        <tr>
+          <td>grep</td>
+          <td>只读</td>
+          <td>正则搜索文件内容</td>
+        </tr>
+        <tr>
+          <td>web_fetch</td>
+          <td>只读</td>
+          <td>HTTP/HTTPS 抓取，带 SSRF 防护</td>
+        </tr>
+        <tr>
+          <td>code_index</td>
+          <td>只读</td>
+          <td>14种语言代码符号索引</td>
+        </tr>
+        <tr>
+          <td>lsp_definition</td>
+          <td>只读</td>
+          <td>LSP：跳转符号定义处</td>
+        </tr>
+        <tr>
+          <td>lsp_references</td>
+          <td>只读</td>
+          <td>LSP：查找符号所有引用</td>
+        </tr>
+        <tr>
+          <td>lsp_hover</td>
+          <td>只读</td>
+          <td>LSP：类型签名和文档</td>
+        </tr>
+        <tr>
+          <td>lsp_diagnostics</td>
+          <td>只读</td>
+          <td>LSP：编译/语法错误诊断</td>
+        </tr>
+        <tr>
+          <td>todo_write</td>
+          <td>只读</td>
+          <td>结构化任务列表</td>
+        </tr>
+        <tr>
+          <td>complete_step</td>
+          <td>只读</td>
+          <td>证据驱动步骤签收</td>
+        </tr>
+        <tr>
+          <td><span class="badge badge-new">new</span> ask</td>
+          <td>只读</td>
+          <td>结构化多选题交互式提问</td>
+        </tr>
+        <tr>
+          <td><span class="badge badge-new">new</span> read_skill</td>
+          <td>只读</td>
+          <td>加载 inline 技能内容（plan-mode 可用）</td>
+        </tr>
+        <tr>
+          <td>bash</td>
+          <td>写入</td>
+          <td>执行 shell 命令</td>
+        </tr>
+        <tr>
+          <td>write_file</td>
+          <td>写入</td>
+          <td>创建/覆盖文件</td>
+        </tr>
+        <tr>
+          <td>edit_file</td>
+          <td>写入</td>
+          <td>精确字符串替换</td>
+        </tr>
+        <tr>
+          <td>multi_edit</td>
+          <td>写入</td>
+          <td>原子化批量编辑</td>
+        </tr>
+        <tr>
+          <td>move_file</td>
+          <td>写入</td>
+          <td>移动/重命名文件</td>
+        </tr>
+        <tr>
+          <td>task</td>
+          <td>写入</td>
+          <td>派生子智能体执行独立子任务</td>
+        </tr>
+        <tr>
+          <td><span class="badge badge-new">new</span> run_skill</td>
+          <td>写入</td>
+          <td>调用技能（inline 或 subagent）</td>
+        </tr>
+        <tr>
+          <td><span class="badge badge-new">new</span> install_skill</td>
+          <td>写入</td>
+          <td>创建并保存新技能</td>
+        </tr>
+        <tr>
+          <td><span class="badge badge-new">new</span> remember</td>
+          <td>写入</td>
+          <td>保存跨会话持久记忆</td>
+        </tr>
+        <tr>
+          <td><span class="badge badge-new">new</span> forget</td>
+          <td>写入</td>
+          <td>删除过时记忆</td>
+        </tr>
+      </table>
+    </div>
+
+    <div id="read" class="panel">
+      <table>
+        <tr>
+          <th>工具</th>
+          <th>说明</th>
+        </tr>
+        <tr>
+          <td>read_file</td>
+          <td>带行号读取文件</td>
+        </tr>
+        <tr>
+          <td>ls</td>
+          <td>列出目录内容</td>
+        </tr>
+        <tr>
+          <td>glob</td>
+          <td>文件模式匹配</td>
+        </tr>
+        <tr>
+          <td>grep</td>
+          <td>正则搜索内容</td>
+        </tr>
+        <tr>
+          <td>web_fetch</td>
+          <td>HTTP/HTTPS 抓取</td>
+        </tr>
+        <tr>
+          <td>code_index</td>
+          <td>代码符号索引</td>
+        </tr>
+        <tr>
+          <td>lsp_definition</td>
+          <td>LSP 定义跳转</td>
+        </tr>
+        <tr>
+          <td>lsp_references</td>
+          <td>LSP 引用查找</td>
+        </tr>
+        <tr>
+          <td>lsp_hover</td>
+          <td>LSP 类型信息</td>
+        </tr>
+        <tr>
+          <td>lsp_diagnostics</td>
+          <td>LSP 诊断信息</td>
+        </tr>
+        <tr>
+          <td>todo_write</td>
+          <td>任务列表</td>
+        </tr>
+        <tr>
+          <td>complete_step</td>
+          <td>步骤签收</td>
+        </tr>
+        <tr>
+          <td><span class="badge badge-new">new</span> ask</td>
+          <td>结构化提问</td>
+        </tr>
+        <tr>
+          <td><span class="badge badge-new">new</span> read_skill</td>
+          <td>加载技能内容</td>
+        </tr>
+      </table>
+    </div>
+
+    <div id="write" class="panel">
+      <table>
+        <tr>
+          <th>工具</th>
+          <th>说明</th>
+        </tr>
+        <tr>
+          <td>bash</td>
+          <td>执行 shell 命令</td>
+        </tr>
+        <tr>
+          <td>write_file</td>
+          <td>创建/覆盖文件</td>
+        </tr>
+        <tr>
+          <td>edit_file</td>
+          <td>精确字符串替换</td>
+        </tr>
+        <tr>
+          <td>multi_edit</td>
+          <td>批量编辑</td>
+        </tr>
+        <tr>
+          <td>move_file</td>
+          <td>移动/重命名</td>
+        </tr>
+        <tr>
+          <td>task</td>
+          <td>子智能体</td>
+        </tr>
+        <tr>
+          <td><span class="badge badge-new">new</span> run_skill</td>
+          <td>调用技能</td>
+        </tr>
+        <tr>
+          <td><span class="badge badge-new">new</span> install_skill</td>
+          <td>安装技能</td>
+        </tr>
+        <tr>
+          <td><span class="badge badge-new">new</span> remember</td>
+          <td>持久记忆</td>
+        </tr>
+        <tr>
+          <td><span class="badge badge-new">new</span> forget</td>
+          <td>删除记忆</td>
+        </tr>
+      </table>
+    </div>
+
+    <div id="v015" class="panel">
+      <table>
+        <tr>
+          <th>功能</th>
+          <th>工具</th>
+          <th>说明</th>
+        </tr>
+        <tr>
+          <td>Skills 系统</td>
+          <td>run_skill / read_skill / install_skill</td>
+          <td>SKILL.md 按需知识注入，inline+subagent 双模式</td>
+        </tr>
+        <tr>
+          <td>MCP 插件</td>
+          <td>mcp__*</td>
+          <td>外部工具 stdio JSON-RPC 接入，.mcp.json 配置</td>
+        </tr>
+        <tr>
+          <td>Ask 工具</td>
+          <td>ask</td>
+          <td>结构化多选题，1-4 题，支持多选</td>
+        </tr>
+        <tr>
+          <td>记忆持久化</td>
+          <td>remember / forget</td>
+          <td>跨会话记忆，4 类，MEMORY.md 索引</td>
+        </tr>
+        <tr>
+          <td>输出风格</td>
+          <td>/style</td>
+          <td>default / explanatory / learning / concise</td>
+        </tr>
+        <tr>
+          <td>内置技能</td>
+          <td>explore / research / review / security_review</td>
+          <td>4 个 subagent 技能</td>
+        </tr>
+        <tr>
+          <td>终端命令</td>
+          <td>/skills / /mcp / /style</td>
+          <td>3 个新 slash 命令</td>
+        </tr>
+      </table>
+    </div>
+
+    <h2 class="section-title">使用示例</h2>
+
+    <div class="code-block">
+      <span class="cmt">// 调用内置 explore 技能探索代码库</span><br />
+      <span class="fn">run_skill</span>({
+      <span class="str">name: "explore"</span>,
+      <span class="str">arguments: "找到所有调用 AuthService 的地方"</span>
+      })<br /><br />
+      <span class="cmt">// 加载 inline 技能（plan-mode 可用）</span><br />
+      <span class="fn">read_skill</span>({
+      <span class="str">name: "my-workflow"</span> })<br /><br />
+      <span class="cmt">// 保存持久记忆</span><br />
+      <span class="fn">remember</span>({
+      <span class="str">type: "project"</span>,
+      <span class="str">description: "使用 JLine3 终端库"</span>,
+      <span class="str">body: "项目使用 JLine3 3.26.1 实现终端UI..."</span>
+      })<br /><br />
+      <span class="cmt">// 向用户发起结构化提问</span><br />
+      <span class="fn">ask</span>({
+      <span class="str"
+        >questions: [{ header: "框架", question: "选哪个框架？", options: [{
+        label: "React" }, { label: "Vue" }] }]</span
+      >
+      })<br /><br />
+      <span class="cmt">// 切换输出风格</span><br />
+      <span class="kw">/style</span> concise<br /><br />
+      <span class="cmt">// 查看已加载的技能和MCP状态</span><br />
+      <span class="kw">/skills</span><br />
+      <span class="kw">/mcp</span>
+    </div>
+
+    <h2 class="section-title">架构概览</h2>
+
+    <div class="code-block">
+      <span class="cmt">// v0.15.0 新增包结构</span><br />
+      com.anima.<span class="fn">skill</span>
+      <span class="cmt"
+        >— Skills 系统：Skill, SkillStore, SkillIndex, RunSkillTool,
+        ReadSkillTool, InstallSkillTool, BuiltinSkills</span
+      ><br />
+      com.anima.<span class="fn">plugin</span>
+      <span class="cmt"
+        >— MCP 插件：McpHost (JSON-RPC 2.0 stdio 传输), .mcp.json 解析</span
+      ><br />
+      com.anima.<span class="fn">output</span>
+      <span class="cmt">— 输出风格：OutputStyle (4 种内置风格)</span><br />
+      com.anima.<span class="fn">tool</span>
+      <span class="cmt">— 新增：AskTool, RememberTool, ForgetTool</span>
+    </div>
+
+    <h2 class="section-title">版本演进</h2>
+
+    <table>
+      <tr>
+        <th>版本</th>
+        <th>主题</th>
+        <th>核心能力</th>
+      </tr>
+      <tr>
+        <td>v0.9.0</td>
+        <td>基础可用</td>
+        <td>Agent循环 + 三态权限 + 12工具</td>
+      </tr>
+      <tr>
+        <td>v0.10.0</td>
+        <td>Loop Engineering</td>
+        <td>Evidence + complete_step + Plan Mode</td>
+      </tr>
+      <tr>
+        <td>v0.11.0</td>
+        <td>会话与命令</td>
+        <td>JSONL会话 + Slash命令 + 配置文件</td>
+      </tr>
+      <tr>
+        <td>v0.12.0</td>
+        <td>多模型与索引</td>
+        <td>LLMProvider + /model热切换 + code_index</td>
+      </tr>
+      <tr>
+        <td>v0.13.0</td>
+        <td>LSP 集成</td>
+        <td>4 LSP工具 + 14语言 + jdtls</td>
+      </tr>
+      <tr>
+        <td>v0.14.0</td>
+        <td>工程级健壮</td>
+        <td>Subagents + Hooks + Steer + Storm Breaker</td>
+      </tr>
+      <tr>
+        <td><strong>v0.15.0</strong></td>
+        <td><strong>智能体增幅</strong></td>
+        <td><strong>Skills + MCP + Ask + Remember + Style</strong></td>
+      </tr>
+    </table>
+
+    <script>
+      function switchTab(id) {
+        document
+          .querySelectorAll(".tab")
+          .forEach((t) => t.classList.remove("active"));
+        document
+          .querySelectorAll(".panel")
+          .forEach((p) => p.classList.remove("active"));
+        document.getElementById(id).classList.add("active");
+        event.target.classList.add("active");
+      }
+    </script>
+  </body>
+</html>

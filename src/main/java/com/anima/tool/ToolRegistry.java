@@ -26,12 +26,19 @@ public class ToolRegistry {
         return new ArrayList<>(tools.values());
     }
 
+    /** Check if a tool is read-only. Unknown tools default to false (safe). */
+    public boolean isReadOnly(String name) {
+        Tool t = tools.get(name);
+        return t != null && t.isReadOnly();
+    }
+
     public List<ToolSpecification> schemas() {
         List<ToolSpecification> list = new ArrayList<>();
         for (Tool t : tools.values()) {
             list.add(ToolSpecification.builder()
                 .name(t.name())
                 .description(t.description())
+                .parameters(SchemaConverter.convert(t.schema()))
                 .build());
         }
         return list;

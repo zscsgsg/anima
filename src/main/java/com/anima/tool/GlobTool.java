@@ -13,6 +13,7 @@ import java.util.regex.PatternSyntaxException;
 public class GlobTool implements Tool {
 
     @Override public String name() { return "glob"; }
+        @Override public boolean isReadOnly() { return true; }
     @Override public String description() {
         return "Find files matching a glob pattern. Use this to discover project files by name. Supports *, ?, and ** (recursive). Examples: '**​/*.java', 'src/**​/*Test*'.";
     }
